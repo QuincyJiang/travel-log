@@ -2,6 +2,7 @@ import { Link, useParams } from "wouter";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import OverviewMap from "../components/OverviewMap";
+import StayOverview from "../components/StayOverview";
 import DayCard from "../components/DayCard";
 import { getTrip } from "../data/trips";
 import NotFoundPage from "./NotFoundPage";
@@ -40,10 +41,12 @@ export default function TripPage() {
 
         <OverviewMap map={trip.overviewMap} />
 
+        <StayOverview days={trip.days} />
+
         <section className="itinerary" aria-labelledby="itinerary-title">
           <div className="section-heading">
             <div>
-              <span className="section-index">02 / ITINERARY</span>
+              <span className="section-index">03 / ITINERARY</span>
               <h2 id="itinerary-title">每日行程</h2>
             </div>
             <p>点击卡片查看交通地图、时间线、景点说明和当日 Tips。</p>
