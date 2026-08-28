@@ -1,0 +1,44 @@
+import { Link } from "wouter";
+import SiteHeader from "../components/SiteHeader";
+import SiteFooter from "../components/SiteFooter";
+import { trips } from "../data/trips";
+
+export default function HomePage() {
+  return (
+    <div className="page-shell home-page">
+      <SiteHeader />
+      <main>
+        <section className="home-hero">
+          <div className="home-title-wrap">
+            <span className="hero-seal">SINCE<br />2026</span>
+            <h1>行旅志</h1>
+          </div>
+          <div className="home-intro">
+            <span>{String(trips.length).padStart(2, "0")} JOURNEY · {trips[0]?.period}</span>
+          </div>
+        </section>
+
+        <section className="journal-list" aria-labelledby="journeys-title">
+          <div className="journal-heading">
+            <span className="section-index">ARCHIVE / 旅程</span>
+            <h2 id="journeys-title">Journeys</h2>
+          </div>
+          {trips.map((trip, index) => (
+            <Link className="journal-entry" href={`/trips/${trip.id}`} key={trip.id}>
+              <span className="entry-number">{String(index + 1).padStart(2, "0")}</span>
+              <div className="entry-image"><img src={trip.cover} alt={trip.coverAlt} /></div>
+              <div className="entry-copy">
+                <div className="entry-meta"><span>{trip.status}</span><i />{trip.period}</div>
+                <h3>{trip.shortTitle}</h3>
+                <p>{trip.summary}</p>
+              </div>
+              <span className="entry-arrow">↗</span>
+            </Link>
+          ))}
+        </section>
+
+      </main>
+      <SiteFooter />
+    </div>
+  );
+}

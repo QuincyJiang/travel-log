@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>东北秋季旅行｜仙台进出 9/25—10/2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f0e8dc;
+    --paper:#f8f3ea;
+    --card:#fbf7f1;
+    --ink:#1f1b18;
+    --muted:#6d6257;
+    --line:rgba(72,56,41,.16);
+    --accent:#ad5b2c;
+    --accent-deep:#7f3918;
+    --forest:#365246;
+    --gold:#c79a4b;
+    --shadow:0 22px 60px rgba(65,42,22,.14);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at top left, rgba(199,154,75,.18), transparent 28%),
+      radial-gradient(circle at 85% 15%, rgba(173,91,44,.16), transparent 22%),
+      linear-gradient(180deg, #e9decd 0%, #f4ede2 32%, #ede5d8 100%);
+    font-family:"IBM Plex Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    line-height:1.7;
+  }
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    opacity:.28;
+    background-image:
+      linear-gradient(rgba(80,60,40,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(80,60,40,.04) 1px, transparent 1px);
+    background-size:28px 28px;
+    mask-image:linear-gradient(180deg, rgba(0,0,0,.22), transparent 70%);
+  }
+  a{color:inherit}
+  .wrap{max-width:1360px;margin:0 auto;padding:28px 20px 80px;position:relative}
+  .hero{
+    position:relative;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.45);
+    border-radius:34px;
+    padding:34px 34px 28px;
+    background:
+      linear-gradient(135deg, rgba(34,24,19,.92), rgba(70,40,24,.82)),
+      url("https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1600&q=80") center/cover;
+    box-shadow:var(--shadow);
+    color:#f8f4ef;
+  }
+  .hero::after{
+    content:"";
+    position:absolute;
+    inset:auto -10% -28% auto;
+    width:360px;
+    height:360px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(255,204,126,.34), transparent 68%);
+    filter:blur(16px);
+  }
+  .eyebrow{
+    position:relative;
+    z-index:1;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    font-size:12px;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    opacity:.84;
+  }
+  .eyebrow::before{
+    content:"";
+    width:44px;
+    height:1px;
+    background:rgba(255,255,255,.55);
+  }
+  h1,h2,h3{
+    font-family:"Cormorant Garamond","Noto Serif SC",serif;
+    letter-spacing:.01em;
+  }
+  h1{
+    position:relative;
+    z-index:1;
+    max-width:760px;
+    margin:12px 0 14px;
+    font-size:clamp(42px,7vw,82px);
+    line-height:.94;
+    font-weight:700;
+  }
+  .hero p{
+    position:relative;
+    z-index:1;
+    max-width:780px;
+    margin:0;
+    color:rgba(248,244,239,.9);
+    font-size:16px;
+  }
+  .hero-meta{
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0,1fr));
+    gap:12px;
+    margin-top:24px;
+  }
+  .meta-card{
+    min-height:94px;
+    padding:14px 16px;
+    border:1px solid rgba(255,255,255,.15);
+    border-radius:18px;
+    background:rgba(255,255,255,.09);
+    backdrop-filter:blur(10px);
+  }
+  .meta-card span{
+    display:block;
+    margin-bottom:8px;
+    color:rgba(255,255,255,.72);
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .meta-card strong{
+    display:block;
+    font-size:17px;
+    line-height:1.35;
+    font-weight:600;
+  }
+  .main-grid{
+    display:grid;
+    grid-template-columns:minmax(0, 1.2fr) minmax(320px, .8fr);
+    grid-template-areas:"story map";
+    gap:24px;
+    margin-top:24px;
+    align-items:start;
+  }
+  .story{
+    grid-area:story;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  .map-panel{
+    grid-area:map;
+    position:sticky;
+    top:18px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    height:calc(100vh - 36px);
+    max-height:calc(100vh - 36px);
+    padding-right:4px;
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(76,61,49,.28) transparent;
+  }
+  .map-panel::-webkit-scrollbar{width:6px}
+  .map-panel::-webkit-scrollbar-thumb{
+    border-radius:999px;
+    background:rgba(76,61,49,.28);
+  }
+  .card{
+    background:rgba(248,243,234,.88);
+    border:1px solid var(--line);
+    border-radius:28px;
+    box-shadow:var(--shadow);
+    backdrop-filter:blur(8px);
+  }
+  .route-card{
+    padding:24px;
+  }
+  .route-card h2{
+    margin:0 0 8px;
+    font-size:34px;
+  }
+  .route-card p{
+    margin:0 0 18px;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .route-line{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+  }
+  .route-stop,.route-arrow{
+    font-size:13px;
+  }
+  .route-stop{
+    padding:8px 12px;
+    border-radius:999px;
+    background:#efe5d7;
+    border:1px solid rgba(127,57,24,.12);
+    color:var(--accent-deep);
+    font-weight:600;
+  }
+  .route-arrow{color:#9a7f66}
+  .map-shell{
+    overflow:hidden;
+    padding:16px;
+  }
+  .map-head{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:flex-start;
+    margin-bottom:14px;
+  }
+  .map-head h2{
+    margin:0;
+    font-size:34px;
+  }
+  .map-head p{
+    margin:5px 0 0;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .map-badge{
+    flex:0 0 auto;
+    padding:8px 12px;
+    border-radius:999px;
+    background:#2f453b;
+    color:#eef3ef;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+  }
+  .map-frame{
+    position:relative;
+    height:390px;
+    border-radius:22px;
+    overflow:hidden;
+    border:1px solid rgba(54,82,70,.18);
+    background:#d8dfdb;
+  }
+  .map-frame iframe{
+    display:block;
+    width:100%;
+    height:100%;
+    border:0;
+  }
+  .map-focus-marker{
+    position:absolute;
+    left:50%;
+    top:50%;
+    z-index:4;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    pointer-events:none;
+    opacity:0;
+    transform:translate(-50%,-76%) scale(.82);
+    transition:opacity .24s ease, transform .28s cubic-bezier(.2,.8,.2,1), left .38s ease, top .38s ease;
+    filter:drop-shadow(0 10px 12px rgba(35,31,25,.3));
+  }
+  .map-focus-marker.is-visible{
+    opacity:1;
+    transform:translate(-50%,-82%) scale(1);
+  }
+  .map-pin{
+    position:relative;
+    width:38px;
+    height:38px;
+    border:4px solid #fffaf3;
+    border-radius:50% 50% 50% 8px;
+    background:var(--accent);
+    transform:rotate(-45deg);
+    box-shadow:0 0 0 2px rgba(76,45,28,.18);
+  }
+  .map-pin::after{
+    content:"";
+    position:absolute;
+    inset:9px;
+    border-radius:50%;
+    background:#fffaf3;
+  }
+  .map-focus-label{
+    margin-top:9px;
+    padding:7px 11px;
+    border:1px solid rgba(255,250,243,.9);
+    border-radius:999px;
+    background:rgba(47,69,59,.94);
+    color:#fffaf3;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.04em;
+    white-space:nowrap;
+    box-shadow:0 8px 22px rgba(32,42,37,.24);
+  }
+  .map-route-chip{
+    position:absolute;
+    left:12px;
+    bottom:12px;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    max-width:calc(100% - 24px);
+    padding:8px 11px;
+    border-radius:999px;
+    background:rgba(255,250,243,.92);
+    color:#2f453b;
+    font-size:11px;
+    font-weight:700;
+    box-shadow:0 8px 20px rgba(35,42,38,.18);
+    backdrop-filter:blur(8px);
+    pointer-events:none;
+  }
+  .map-route-chip::before{
+    content:"";
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 3px rgba(173,91,44,.16);
+  }
+  .map-focus-inset{
+    position:absolute;
+    top:12px;
+    right:12px;
+    z-index:3;
+    width:min(47%, 210px);
+    height:150px;
+    overflow:hidden;
+    border:3px solid #fffaf3;
+    border-radius:18px;
+    background:#d8dfdb;
+    box-shadow:0 14px 30px rgba(31,42,37,.3);
+    opacity:0;
+    transform:translateY(-8px) scale(.94);
+    pointer-events:none;
+    transition:opacity .24s ease, transform .28s cubic-bezier(.2,.8,.2,1), left .28s ease, right .28s ease;
+  }
+  .map-focus-inset.is-visible{
+    opacity:1;
+    transform:translateY(0) scale(1);
+    pointer-events:auto;
+  }
+  .map-focus-inset.is-left{left:12px;right:auto}
+  .map-focus-inset iframe{width:100%;height:100%;border:0}
+  .map-inset-label{
+    position:absolute;
+    left:8px;
+    top:8px;
+    z-index:1;
+    max-width:calc(100% - 16px);
+    padding:6px 9px;
+    border-radius:999px;
+    background:rgba(47,69,59,.92);
+    color:#fffaf3;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.06em;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    pointer-events:none;
+  }
+  .map-toolbar{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:10px;
+    margin-top:14px;
+  }
+  .map-button{
+    border:1px solid var(--line);
+    border-radius:16px;
+    background:#fffaf3;
+    color:var(--ink);
+    padding:12px 14px;
+    text-align:left;
+    cursor:pointer;
+    transition:transform .22s ease, background .22s ease, border-color .22s ease, box-shadow .22s ease;
+    font:inherit;
+  }
+  .map-button strong{
+    display:block;
+    margin-bottom:4px;
+    font-size:14px;
+  }
+  .map-button span{
+    display:block;
+    color:var(--muted);
+    font-size:12px;
+    line-height:1.45;
+  }
+  .map-button:hover,.day:hover{
+    transform:translateY(-2px);
+  }
+  .map-button.is-active{
+    background:#2f453b;
+    border-color:#2f453b;
+    box-shadow:0 14px 30px rgba(47,69,59,.22);
+    color:#f2f3ef;
+  }
+  .map-button.is-active span{color:rgba(242,243,239,.76)}
+  .fullmap-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:46px;
+    margin-top:14px;
+    padding:0 18px;
+    border-radius:999px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-deep));
+    color:#fff6ef;
+    text-decoration:none;
+    font-weight:600;
+  }
+  .fullmap-link:hover{filter:brightness(1.05)}
+  .day{
+    overflow:hidden;
+    transition:transform .22s ease, box-shadow .22s ease;
+  }
+  .day-head{
+    display:grid;
+    grid-template-columns:90px 1fr auto;
+    gap:18px;
+    align-items:center;
+    padding:24px 26px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  .date{
+    display:grid;
+    place-items:center;
+    min-height:84px;
+    padding:8px;
+    border-radius:20px;
+    background:linear-gradient(180deg,#e8d9c6,#f7efe3);
+    border:1px solid rgba(127,57,24,.15);
+    color:var(--accent-deep);
+    font-family:"Noto Serif SC",serif;
+    font-weight:700;
+    font-size:24px;
+    line-height:1;
+  }
+  .date small{
+    display:block;
+    margin-top:7px;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    font-family:"IBM Plex Sans",sans-serif;
+  }
+  .day h2{
+    margin:0;
+    font-size:34px;
+    line-height:1;
+  }
+  .subtitle{
+    margin-top:6px;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .day-index{
+    align-self:start;
+    padding:8px 12px;
+    border-radius:999px;
+    background:#efe3d0;
+    color:var(--accent-deep);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+  .content{
+    display:flex;
+    flex-direction:column;
+    padding:22px 26px 26px;
+  }
+  .exec-card,.note,.highlight{
+    border-radius:18px;
+    padding:14px 16px;
+    font-size:13px;
+  }
+  .exec-card{
+    margin-bottom:16px;
+    background:#fff0de;
+    border:1px solid rgba(173,91,44,.18);
+  }
+  .note{
+    background:#f3f2ed;
+    border:1px solid rgba(54,82,70,.12);
+  }
+  .highlight{
+    background:#f4eadc;
+    border-left:4px solid var(--gold);
+    color:#47392d;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:minmax(0,1.05fr) minmax(260px,.95fr);
+    gap:16px;
+  }
+  .section{
+    min-width:0;
+    border:1px solid var(--line);
+    border-radius:22px;
+    padding:18px;
+    background:rgba(255,252,246,.72);
+  }
+  .section h3{
+    margin:0 0 12px;
+    font-size:24px;
+  }
+  .timeline{
+    list-style:none;
+    margin:0;
+    padding:0;
+  }
+  .timeline li{
+    position:relative;
+    margin:0;
+    padding:0 0 14px 22px;
+    border-left:1px dashed rgba(127,57,24,.25);
+  }
+  .timeline li:last-child{
+    padding-bottom:0;
+    border-left-color:transparent;
+  }
+  .timeline li::before{
+    content:"";
+    position:absolute;
+    left:-5px;
+    top:7px;
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 0 4px rgba(173,91,44,.12);
+  }
+  .time{
+    display:block;
+    margin-bottom:3px;
+    color:var(--accent-deep);
+    font-size:12px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+  .transport-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+  }
+  .transport{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:7px 10px;
+    border-radius:999px;
+    background:#ece5d8;
+    color:#4b3d2f;
+    font-size:12px;
+  }
+  .stay{
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    margin-top:14px;
+    padding:14px 16px;
+    border-radius:18px;
+    background:#2f453b;
+    color:#eff3ee;
+  }
+  .stay b{font-size:15px}
+  .stay span{font-size:12px;color:rgba(239,243,238,.76)}
+  .day-commute{
+    order:-1;
+    margin:0 0 16px;
+    padding:14px;
+    border:1px solid rgba(54,82,70,.16);
+    border-radius:22px;
+    background:#edf0eb;
+  }
+  .day-commute-head{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:14px;
+    margin-bottom:11px;
+  }
+  .day-commute-copy span{
+    display:block;
+    margin-bottom:4px;
+    color:var(--accent);
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+  }
+  .day-commute-copy strong{
+    display:block;
+    color:#2f453b;
+    font-size:15px;
+  }
+  .day-commute-link{
+    flex:0 0 auto;
+    color:var(--accent-deep);
+    font-size:12px;
+    font-weight:700;
+    text-decoration:none;
+    border-bottom:1px solid rgba(127,57,24,.35);
+  }
+  .day-route-rail{
+    display:flex;
+    align-items:flex-start;
+    margin:0 2px 12px;
+    padding:2px 0 7px;
+    overflow-x:auto;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(47,69,59,.28) transparent;
+  }
+  .route-node{
+    flex:0 0 auto;
+    min-width:62px;
+    color:var(--muted);
+    text-align:center;
+    transition:color .2s ease;
+  }
+  .route-node::before{
+    content:"";
+    display:block;
+    width:10px;
+    height:10px;
+    margin:0 auto 6px;
+    border:3px solid #edf0eb;
+    border-radius:50%;
+    background:#87998f;
+    box-shadow:0 0 0 1px rgba(47,69,59,.28);
+    transition:background .2s ease, box-shadow .2s ease, transform .2s ease;
+  }
+  .route-node span{
+    display:block;
+    font-size:10px;
+    font-weight:700;
+    line-height:1.25;
+    white-space:nowrap;
+  }
+  .route-node.is-active{
+    color:#7f3918;
+  }
+  .route-node.is-active::before{
+    background:#ad5b2c;
+    box-shadow:0 0 0 3px rgba(173,91,44,.16);
+    transform:scale(1.08);
+  }
+  .route-leg{
+    position:relative;
+    flex:1 0 76px;
+    min-width:76px;
+    height:34px;
+    margin:0 -4px;
+    border:0;
+    background:transparent;
+    color:var(--muted);
+    cursor:pointer;
+    font:inherit;
+  }
+  .route-leg::before{
+    content:"";
+    position:absolute;
+    left:0;
+    right:0;
+    top:5px;
+    height:2px;
+    background:rgba(47,69,59,.24);
+    transition:height .2s ease, background .2s ease;
+  }
+  .route-leg::after{
+    content:"";
+    position:absolute;
+    right:0;
+    top:2px;
+    width:7px;
+    height:7px;
+    border-top:2px solid rgba(47,69,59,.38);
+    border-right:2px solid rgba(47,69,59,.38);
+    transform:rotate(45deg);
+  }
+  .route-leg span{
+    position:absolute;
+    left:50%;
+    top:13px;
+    max-width:92px;
+    padding:2px 5px;
+    border-radius:999px;
+    background:#edf0eb;
+    font-size:9px;
+    font-weight:700;
+    line-height:1.2;
+    white-space:nowrap;
+    transform:translateX(-50%);
+  }
+  .route-leg:hover::before,
+  .route-leg.is-active::before{
+    height:4px;
+    background:#ad5b2c;
+  }
+  .route-leg.is-active::after{
+    border-color:#ad5b2c;
+  }
+  .route-leg.is-active span{
+    color:#7f3918;
+  }
+  .day-map-frame{
+    position:relative;
+    height:230px;
+    overflow:hidden;
+    border:1px solid rgba(54,82,70,.14);
+    border-radius:16px;
+    background:#d8dfdb;
+  }
+  .day-map-frame iframe{
+    display:block;
+    width:100%;
+    height:100%;
+    border:0;
+  }
+  .transit-chip{
+    position:absolute;
+    left:10px;
+    bottom:10px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+    padding:7px 10px;
+    border-radius:999px;
+    background:rgba(47,69,59,.94);
+    color:#f5f2e9;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.06em;
+    pointer-events:none;
+    box-shadow:0 8px 18px rgba(31,42,37,.2);
+  }
+  .transit-chip::before{
+    content:"";
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#e2ad5f;
+  }
+  .summary{
+    padding:24px;
+  }
+  .summary h2{
+    margin:0 0 14px;
+    font-size:34px;
+  }
+  .summary p{
+    margin:0 0 16px;
+    color:var(--muted);
+    font-size:14px;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+    background:#fffcf8;
+    border-radius:18px;
+    overflow:hidden;
+  }
+  th,td{
+    padding:12px 10px;
+    border-bottom:1px solid var(--line);
+    text-align:left;
+    vertical-align:top;
+  }
+  th{
+    background:#efe4d5;
+    color:#4b3d31;
+    font-weight:600;
+  }
+  tr:last-child td{border-bottom:none}
+  .footer{
+    margin-top:18px;
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+  }
+  @media(max-width:1120px){
+    .hero-meta{grid-template-columns:repeat(2, minmax(0,1fr))}
+    .main-grid{grid-template-columns:1fr;grid-template-areas:"story" "map"}
+    .map-panel{position:static;height:auto;max-height:none;padding-right:0;overflow:visible}
+  }
+  @media(max-width:780px){
+    .wrap{padding:14px 12px 48px}
+    .hero{padding:24px 20px 22px;border-radius:24px}
+    .hero-meta{grid-template-columns:1fr}
+    .main-grid{grid-template-areas:"map" "story"}
+    .route-card,.map-shell,.summary{padding:18px}
+    .day-head{grid-template-columns:74px 1fr;gap:14px;padding:18px 18px 14px}
+    .day-index{grid-column:2}
+    .content{padding:18px}
+    .grid{grid-template-columns:1fr}
+    .map-toolbar{grid-template-columns:1fr}
+    .map-head{display:block}
+    .map-badge{display:inline-flex;margin-top:10px}
+    .map-frame{height:320px}
+    .day-map-frame{height:210px}
+    .day-route-rail{margin-right:-4px;margin-left:-4px}
+    .route-node{min-width:58px}
+    .route-leg{flex-basis:68px;min-width:68px}
+    .day-commute-head{display:block}
+    .day-commute-link{display:inline-flex;margin-top:8px}
+    .day h2,.summary h2,.route-card h2,.map-head h2{font-size:28px}
+    table{display:block;overflow-x:auto;white-space:nowrap}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">Tohoku Autumn Circuit · September 25 to October 2, 2026</div>
+    <h1>东北秋季 8 天 7 晚</h1>
+    <p>仙台进出，全程使用铁路与地方巴士，经过盛冈、青森、十和田湖、三陆海岸和松岛。</p>
+    <div class="hero-meta">
+      <div class="meta-card">
+        <span>Window</span>
+        <strong>2026-09-25 至 2026-10-02</strong>
+      </div>
+      <div class="meta-card">
+        <span>Transit</span>
+        <strong>JR 新干线、机场线、地方巴士</strong>
+      </div>
+      <div class="meta-card">
+        <span>Landscape</span>
+        <strong>湖泊、溪流、海岸、港町</strong>
+      </div>
+      <div class="meta-card">
+        <span>Rhythm</span>
+        <strong>前半段看自然，后半段回仙台收尾</strong>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <main class="story">
+      <section class="card route-card">
+        <h2>环线结构</h2>
+        <p>仙台机场出发，经盛冈、青森和三陆海岸返回仙台，10 月 1 日往返松岛。</p>
+        <div class="route-line">
+          <span class="route-stop">香港</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">仙台机场</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">盛冈</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">青森</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">十和田湖</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">奥入濑</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">八户</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">久慈</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">宫古</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">净土滨</span>
+          <span class="route-arrow">→</span>
+          <span class="route-stop">仙台</span>
+          <span class="route-arrow">↔</span>
+          <span class="route-stop">松岛</span>
+        </div>
+      </section>
+
+      <article class="card day">
+        <div class="day-head">
+          <div class="date">9/25<small>FRI</small></div>
+          <div>
+            <h2>香港 → 仙台 → 盛冈</h2>
+            <div class="subtitle">仙台机场落地后直接前往盛冈</div>
+          </div>
+          <div class="day-index">Day 01</div>
+        </div>
+        <div class="content">
+          <div class="exec-card"><b>交通：</b>仙台机场线约 25 分钟到仙台站；东北新干线约 40–50 分钟到盛冈。落地至新干线发车预留 60–90 分钟。</div>
+          <div class="grid">
+            <div class="section">
+              <h3>行程</h3>
+              <ul class="timeline">
+                <li><span class="time">08:00</span>香港出发，UO896</li>
+                <li><span class="time">13:35 左右</span>抵达仙台机场</li>
+                <li><span class="time">机场线</span>仙台机场 → 仙台站，约 25 分钟</li>
+                <li><span class="time">东北新干线</span>仙台 → 盛冈，约 40–50 分钟</li>
+                <li><span class="time">17:00 左右</span>抵达盛冈，入住、晚餐</li>
+              </ul>
+            </div>
+            <div class="section">
+              <h3>晚上</h3>
+              <p>盛冈站附近轻松吃饭：盛冈冷面、じゃじゃ麺。</p>
+              <div class="stay"><b>住宿：盛冈</b><span>盛冈站附近</span></div>
+            </div>
+          </div>
+          <div class="day-commute">
+            <div class="day-commute-head">
+              <div class="day-commute-copy"><span>Google Maps · Public Transit</span><strong>仙台机场 → 仙台站 → 盛冈站</strong></div>
+              <a class="day-commute-link" href="https://www.google.com/maps/dir/?api=1&amp;origin=Sendai+Airport&amp;destination=Morioka+Station&amp;waypoints=Sendai+Station&amp;travelmode=transit" target="_blank" rel="noreferrer">打开公共交通路线</a>
+            </div>
+            <div class="day-map-frame">
+              <iframe src="https://maps.google.com/maps?saddr=38.1399076%2C140.9171139&amp;daddr=38.2601316%2C140.8824375+to%3A39.7014371%2C141.136723&amp;dirflg=r&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Day 1 仙台机场至盛冈公共交通"></iframe>
+              <div class="transit-chip">公共交通 · 机场线 + 新干线</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card day">
+        <div class="day-head">
+          <div class="date">9/26<small>SAT</small></div>
+          <div>
+            <h2>盛冈市区一日</h2>
+            <div class="subtitle">历史建筑、城迹与三大面食</div>
+          </div>
+          <div class="day-index">Day 02</div>
+        </div>
+        <div class="content">
+          <div class="exec-card"><b>交通：</b>盛冈站、城迹公园和红砖馆之间使用市区循环巴士与步行。</div>
+          <div class="grid">
+            <div class="section">
+              <h3>行程</h3>
+              <ul class="timeline">
+                <li><span class="time">09:00</span>MALIOS 20 楼展望室，俯瞰盛冈市区</li>
+                <li><span class="time">上午</span>开运桥 → 盛冈城迹公园 → 樱山神社</li>
+                <li><span class="time">中午</span>盛冈冷面、炸酱面或碗子荞麦面三选一</li>
+                <li><span class="time">下午</span>岩手银行红砖馆 → 盛冈町家物语馆或八幡宫</li>
+                <li><span class="time">傍晚</span>返回盛冈站，休息并整理次日行李</li>
+              </ul>
+            </div>
+            <div class="section">
+              <h3>市区范围</h3>
+              <p>城迹公园与红砖馆作为固定部分；町家物语馆和八幡宫方向距离较远，按体力选择一处。</p>
+              <div class="transport-row">
+                <span class="transport">市区步行</span>
+                <span class="transport">城迹公园</span>
+                <span class="transport">红砖馆</span>
+                <span class="transport">盛冈三大面</span>
+              </div>
+              <div class="stay"><b>住宿：盛冈</b><span>连续第二晚</span></div>
+            </div>
+          </div>
+          <div class="day-commute">
+            <div class="day-commute-head">
+              <div class="day-commute-copy"><span>Google Maps · Public Transit</span><strong>盛冈站 → 城迹公园 → 红砖馆 → 盛冈站</strong></div>
+              <a class="day-commute-link" href="https://www.google.com/maps/dir/?api=1&amp;origin=Morioka+Station&amp;destination=Morioka+Station&amp;waypoints=Morioka+Castle+Ruins+Park%7CIwate+Bank+Red+Brick+Building&amp;travelmode=transit" target="_blank" rel="noreferrer">打开公共交通路线</a>
+            </div>
+            <div class="day-map-frame">
+              <iframe src="https://maps.google.com/maps?saddr=Morioka+Station&amp;daddr=Morioka+Castle+Ruins+Park+to%3AIwate+Bank+Red+Brick+Building+to%3AMorioka+Station&amp;dirflg=r&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Day 2 盛冈市区公共交通"></iframe>
+              <div class="transit-chip">公共交通 · 市区巴士</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card day">
+        <div class="day-head">
+          <div class="date">9/27<small>SUN</small></div>
+          <div>
+            <h2>盛冈 → 青森</h2>
+            <div class="subtitle">上午北上，下午完整留给青森市区</div>
+          </div>
+          <div class="day-index">Day 03</div>
+        </div>
+        <div class="content">
+          <div class="exec-card"><b>交通：</b>东北新干线到新青森，换 JR 奥羽本线到青森站；当晚确认次日 JR 巴士时刻。</div>
+          <div class="grid">
+            <div class="section">
+              <h3>行程</h3>
+              <ul class="timeline">
+                <li><span class="time">上午</span>盛冈 → 新青森，东北新干线 Hayabusa，约 1 小时</li>
+                <li><span class="time">随后</span>新青森 → 青森，JR 奥羽本线，约 6 分钟</li>
+                <li><span class="time">中午</span>青森鱼菜中心或青森站周边午餐</li>
+                <li><span class="time">下午</span>睡魔之家 WA RASSE → A-FACTORY → 青森湾 → ASPAM</li>
+                <li><span class="time">傍晚</span>回酒店休息，准备第二天早起</li>
+              </ul>
+            </div>
+            <div class="section">
+              <h3>住宿</h3>
+              <p>酒店选青森站步行 5–10 分钟范围，方便次日搭早班巴士前往十和田湖。</p>
+              <div class="stay"><b>住宿：青森</b><span>青森站附近</span></div>
+              <div class="highlight">青森市区景点集中在车站与海湾周边，步行可达。</div>
+            </div>
+          </div>
+          <div class="day-commute">
+            <div class="day-commute-head">
+              <div class="day-commute-copy"><span>Google Maps · Public Transit</span><strong>盛冈站 → 新青森站 → 青森站</strong></div>
+              <a class="day-commute-link" href="https://www.google.com/maps/dir/?api=1&amp;origin=Morioka+Station&amp;destination=Aomori+Station&amp;waypoints=Shin-Aomori+Station&amp;travelmode=transit" target="_blank" rel="noreferrer">打开公共交通路线</a>
+            </div>
+            <div class="day-map-frame">
+              <iframe src="https://maps.google.com/maps?saddr=Morioka+Station&amp;daddr=Shin-Aomori+Station+to%3AAomori+Station&amp;dirflg=r&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Day 3 盛冈至青森公共交通"></iframe>
+              <div class="transit-chip">公共交通 · 新干线 + JR</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card day">
+        <div class="day-head">
+          <div class="date">9/28<small>MON</small></div>
+          <div>
+            <h2>十和田湖 + 奥入濑溪流</h2>
+            <div class="subtitle">整趟旅行的自然景观高潮</div>
+          </div>
+          <div class="day-index">Day 04</div>
+        </div>
+        <div class="content">
+          <div class="exec-card"><b>交通：</b>JR 巴士班次稀疏，青森、休屋和奥入濑三段时刻需在前一晚确认。</div>
+          <div class="grid">
+            <div class="section">
+              <h3>推荐交通</h3>
+              <ul class="timeline">
+                <li><span class="time">07:30 左右</span>青森站 → 十和田湖・休屋，JR 巴士东北，约 2 小时 45 分</li>
+                <li><span class="time">10:15 左右</span>抵达十和田湖，湖畔短游</li>
+                <li><span class="time">11:00 左右</span>十和田湖 → 奥入濑溪流温泉，约 45 分钟</li>
+                <li><span class="time">11:45–14:20</span>奥入濑溪流徒步，建议石ヶ戸 ～ 雲井の滝一段</li>
+                <li><span class="time">下午</span>巴士返回十和田湖，再回青森，约 17:00–18:00 抵达</li>
+              </ul>
+            </div>
+            <div class="section">
+              <h3>徒步范围</h3>
+              <p>不安排全程徒步，选 2–3 小时的溪流精华段即可，把体力留给后面的移动日。</p>
+              <div class="transport-row">
+                <span class="transport">JR 巴士</span>
+                <span class="transport">十和田湖</span>
+                <span class="transport">奥入濑</span>
+              </div>
+              <div class="stay"><b>住宿：青森</b><span>连续第二晚</span></div>
+              <div class="highlight"><b>雨天替代：</b>若奥入濑遇持续大雨或巴士停运，改为青森 ↔ 弘前一日往返，安排弘前公园、弘前城、藤田纪念庭园；室内场馆以当日开放信息为准。</div>
+            </div>
+          </div>
+          <div class="day-commute">
+            <div class="day-commute-head">
+              <div class="day-commute-copy"><span>Google Maps · Public Transit</span><strong>青森站 → 十和田湖休屋 → 奥入濑 → 青森站</strong></div>
+              <a class="day-commute-link" href="https://www.google.com/maps/dir/?api=1&amp;origin=Aomori+Station&amp;destination=Aomori+Station&amp;waypoints=40.4284986%2C140.8946115%7COirase+Gorge&amp;travelmode=transit" target="_blank" rel="noreferrer">打开公共交通路线</a>
+            </div>
+            <div class="day-map-frame">
+              <iframe src="https://maps.google.com/maps?saddr=Aomori+Station&amp;daddr=40.4284986%2C140.8946115+to%3A40.4899618%2C140.9525486+to%3AAomori+Station&amp;dirflg=r&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Day 4 十和田湖与奥入濑公共交通"></iframe>
+              <div class="transit-chip">公共交通 · JR 巴士</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card day">
+        <div class="day-head">
+          <div class="date">9/29<small>TUE</small></div>
+          <div>
+            <h2>青森 → 八户 → 久慈 → 宫古</h2>
+            <div class="subtitle">沿三陆海岸南下｜铁路与港町海鲜</div>
+          </div>
+          <div class="day-index">Day 05</div>
+        </div>
+        <div class="content">
+          <div class="exec-card"><b>交通：</b>东北新干线、JR 八户线和三陆铁道连续换乘，全程约 5–6 小时。</div>
+          <div class="grid">
+            <div class="section">
+              <h3>铁路行程</h3>
+              <ul class="timeline">
+                <li><span class="time">早上</span>青森 → 新青森 → 八户，JR 与东北新干线</li>
+                <li><span class="time">上午</span>八户 → 久慈，JR 八户线，约 2 小时</li>
+                <li><span class="time">中午</span>久慈站附近午餐；预留地方铁路换乘时间</li>
+                <li><span class="time">下午</span>久慈 → 宫古，三陆铁道 Rias 线，约 1 小时 40 分至 2 小时</li>
+                <li><span class="time">傍晚</span>入住宫古站附近酒店，安排海鲜晚餐</li>
+              </ul>
+            </div>
+            <div class="section">
+              <h3>宫古</h3>
+              <p>这一天的景观主要来自八户线与三陆铁道沿线，宫古负责住宿和海鲜。酒店选宫古站步行范围，方便次日上午搭巴士前往净土滨。</p>
+              <div class="transport-row">
+                <span class="transport">JR 八户线</span>
+                <span class="transport">三陆铁道</span>
+                <span class="transport">三陆海鲜</span>
+              </div>
+              <div class="stay"><b>住宿：宫古</b><span>宫古站附近</span></div>
+            </div>
+          </div>
+          <div class="day-commute">
+            <div class="day-commute-head">
+              <div class="day-commute-copy"><span>Google Maps · Public Transit</span><strong>青森站 → 八户站 → 久慈站 → 宫古站</strong></div>
+              <a class="day-commute-link" href="https://www.google.com/maps/dir/?api=1&amp;origin=Aomori+Station&amp;destination=Miyako+Station+Iwate&amp;waypoints=Hachinohe+Station%7CKuji+Station+Iwate&amp;travelmode=transit" target="_blank" rel="noreferrer">打开公共交通路线</a>
+            </div>
+            <div class="day-map-frame">
+              <iframe src="https://maps.google.com/maps?saddr=Aomori+Station&amp;daddr=Hachinohe+Station+to%3AKuji+Station+Iwate+to%3AMiyako+Station+Iwate&amp;dirflg=r&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Day 5 青森至宫古公共交通"></iframe>
+              <div class="transit-chip">公共交通 · JR + 三陆铁道</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card day">
+        <div class="day-head">
+          <div class="date">9/30<small>WED</small></div>
+          <div>
+            <h2>宫古 → 净土滨 → 盛冈 → 仙台</h2>
+            <div class="subtitle">上午海岸散策，下午返回仙台</div>
+          </div>
+          <div class="day-index">Day 06</div>
+        </div>
+        <div class="content">
+          <div class="exec-card"><b>交通：</b>宫古至盛冈约 2 小时 15 分至 2 小时 40 分，是当天主要班次约束。</div>
+          <div class="grid">
+            <div class="section">
+              <h3>行程</h3>
+              <ul class="timeline">
+                <li><span class="time">08:30 左右</span>宫古站 → 净土滨，巴士约 20 分钟</li>
+                <li><span class="time">上午</span>净土滨海岸散策；视天气选择游船</li>
+                <li><span class="time">中午</span>净土滨或宫古市区午餐</li>
+                <li><span class="time">下午</span>宫古 → 盛冈，106 急行巴士或 JR 山田线</li>
+                <li><span class="time">随后</span>盛冈 → 仙台，东北新干线约 40–50 分钟</li>
+                <li><span class="time">傍晚</span>抵达仙台，入住并晚餐</li>
+              </ul>
+            </div>
+            <div class="section">
+              <h3>住宿</h3>
+              <p>从今晚开始不再搬行李，仙台作为最后两晚基地。宫古到盛冈的班次是当天主要约束。</p>
+              <div class="highlight">净土滨遇强风或降雨时，缩短海岸停留并提前返回宫古；不要压缩宫古至盛冈的换乘余量。</div>
+              <div class="stay"><b>住宿：仙台</b><span>仙台站附近</span></div>
+            </div>
+          </div>
+          <div class="day-commute">
+            <div class="day-commute-head">
+              <div class="day-commute-copy"><span>Google Maps · Public Transit</span><strong>宫古站 → 净土滨 → 盛冈站 → 仙台站</strong></div>
+              <a class="day-commute-link" href="https://www.google.com/maps/dir/?api=1&amp;origin=Miyako+Station+Iwate&amp;destination=Sendai+Station&amp;waypoints=Jodogahama+Beach%7CMorioka+Station&amp;travelmode=transit" target="_blank" rel="noreferrer">打开公共交通路线</a>
+            </div>
+            <div class="day-map-frame">
+              <iframe src="https://maps.google.com/maps?saddr=Miyako+Station+Iwate&amp;daddr=Jodogahama+Beach+to%3AMorioka+Station+to%3ASendai+Station&amp;dirflg=r&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Day 6 宫古至仙台公共交通"></iframe>
+              <div class="transit-chip">公共交通 · 巴士 + 新干线</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card day">
+        <div class="day-head">
+          <div class="date">10/1<small>THU</small></div>
+          <div>
+            <h2>松岛半日 + 仙台市区</h2>
+            <div class="subtitle">松岛海岸半日，傍晚返回仙台</div>
+          </div>
+          <div class="day-index">Day 07</div>
+        </div>
+        <div class="content">
+          <div class="note"><b>交通：</b>JR 仙石线约 40 分钟，目的站为“松岛海岸站”。</div>
+          <div class="grid">
+            <div class="section">
+              <h3>白天</h3>
+              <ul class="timeline">
+                <li><span class="time">08:30–09:00</span>仙台站 → 松岛海岸站</li>
+                <li><span class="time">上午</span>五大堂 → 瑞巌寺 → 圆通院</li>
+                <li><span class="time">中午</span>松岛湾观光船或海湾步行，午餐</li>
+                <li><span class="time">15:00–16:00</span>返回仙台</li>
+                <li><span class="time">傍晚</span>定禅寺通、一番町或仙台站周边购物</li>
+              </ul>
+            </div>
+            <div class="section">
+              <h3>游览范围</h3>
+              <p>五大堂、瑞巌寺和圆通院为主要步行区域；观光船按天气与班次安排。</p>
+              <div class="transport-row">
+                <span class="transport">仙石线</span>
+                <span class="transport">松岛湾</span>
+                <span class="transport">瑞巌寺</span>
+                <span class="transport">购物</span>
+              </div>
+              <div class="stay"><b>住宿：仙台</b><span>连续第二晚</span></div>
+            </div>
+          </div>
+          <div class="day-commute">
+            <div class="day-commute-head">
+              <div class="day-commute-copy"><span>Google Maps · Public Transit</span><strong>仙台站 ↔ 松岛海岸站</strong></div>
+              <a class="day-commute-link" href="https://www.google.com/maps/dir/?api=1&amp;origin=Sendai+Station&amp;destination=Matsushima+Kaigan+Station&amp;travelmode=transit" target="_blank" rel="noreferrer">打开公共交通路线</a>
+            </div>
+            <div class="day-map-frame">
+              <iframe src="https://maps.google.com/maps?saddr=Sendai+Station&amp;daddr=Matsushima+Kaigan+Station+to%3ASendai+Station&amp;dirflg=r&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Day 7 仙台与松岛公共交通"></iframe>
+              <div class="transit-chip">公共交通 · JR 仙石线</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card day">
+        <div class="day-head">
+          <div class="date">10/2<small>FRI</small></div>
+          <div>
+            <h2>仙台 → 仙台机场 → 香港</h2>
+            <div class="subtitle">无压力返程日</div>
+          </div>
+          <div class="day-index">Day 08</div>
+        </div>
+        <div class="content">
+          <div class="exec-card"><b>交通：</b>仙台机场线约 25 分钟；11:30 左右离开仙台站，12:00 前后抵达机场。</div>
+          <div class="grid">
+            <div class="section">
+              <h3>返程</h3>
+              <ul class="timeline">
+                <li><span class="time">09:00 左右</span>自然醒、退房</li>
+                <li><span class="time">10:00–11:00</span>仙台站附近最后购物</li>
+                <li><span class="time">11:30 左右</span>仙台站 → 仙台机场，机场线约 25 分钟</li>
+                <li><span class="time">12:00–12:15</span>抵达机场，办理国际航班手续</li>
+                <li><span class="time">14:30</span>UO897 仙台 → 香港</li>
+              </ul>
+            </div>
+            <div class="section">
+              <h3>最后采购</h3>
+              <p>萩之月、牛舌、笹かまぼこ等都能在仙台站或仙台机场完成。</p>
+            </div>
+          </div>
+          <div class="day-commute">
+            <div class="day-commute-head">
+              <div class="day-commute-copy"><span>Google Maps · Public Transit</span><strong>仙台站 → 仙台机场</strong></div>
+              <a class="day-commute-link" href="https://www.google.com/maps/dir/?api=1&amp;origin=Sendai+Station&amp;destination=Sendai+Airport&amp;travelmode=transit" target="_blank" rel="noreferrer">打开公共交通路线</a>
+            </div>
+            <div class="day-map-frame">
+              <iframe src="https://maps.google.com/maps?saddr=Sendai+Station&amp;daddr=Sendai+Airport&amp;dirflg=r&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Day 8 仙台站至仙台机场公共交通"></iframe>
+              <div class="transit-chip">公共交通 · 仙台机场线</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <section class="card summary">
+        <h2>全程交通速查</h2>
+        <table>
+          <thead>
+            <tr><th>日期</th><th>路段</th><th>交通</th><th>约耗时</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>9/25</td><td>仙台机场 → 仙台</td><td>仙台机场线</td><td>约 25 分钟</td></tr>
+            <tr><td>9/25</td><td>仙台 → 盛冈</td><td>东北新干线</td><td>约 40–50 分钟</td></tr>
+            <tr><td>9/27</td><td>盛冈 → 新青森 → 青森</td><td>新干线 + JR</td><td>约 1 小时 20 分</td></tr>
+            <tr><td>9/28</td><td>青森 ↔ 十和田湖</td><td>JR 巴士</td><td>约 2 小时 45 分单程</td></tr>
+            <tr><td>9/28</td><td>十和田湖 ↔ 奥入濑</td><td>JR 巴士</td><td>约 45 分钟</td></tr>
+            <tr><td>9/29</td><td>青森 → 八户</td><td>JR + 东北新干线</td><td>约 1 小时级</td></tr>
+            <tr><td>9/29</td><td>八户 → 久慈</td><td>JR 八户线</td><td>约 2 小时</td></tr>
+            <tr><td>9/29</td><td>久慈 → 宫古</td><td>三陆铁道 Rias 线</td><td>约 1 小时 40 分至 2 小时</td></tr>
+            <tr><td>9/30</td><td>宫古 ↔ 净土滨</td><td>当地巴士</td><td>约 20 分钟单程</td></tr>
+            <tr><td>9/30</td><td>宫古 → 盛冈 → 仙台</td><td>巴士或 JR + 新干线</td><td>约 3 小时 15 分至 4 小时</td></tr>
+            <tr><td>10/1</td><td>仙台 ↔ 松岛海岸</td><td>JR 仙石线</td><td>约 40 分钟单程</td></tr>
+            <tr><td>10/2</td><td>仙台 → 仙台机场</td><td>仙台机场线</td><td>约 25 分钟</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card summary">
+        <h2>住宿分配</h2>
+        <table>
+          <thead>
+            <tr><th>日期</th><th>住宿地</th><th>建议</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>9/25</td><td>盛冈</td><td>盛冈站附近</td></tr>
+            <tr><td>9/26</td><td>盛冈</td><td>连续第二晚</td></tr>
+            <tr><td>9/27</td><td>青森</td><td>青森站附近</td></tr>
+            <tr><td>9/28</td><td>青森</td><td>连续第二晚</td></tr>
+            <tr><td>9/29</td><td>宫古</td><td>宫古站附近，方便净土滨巴士</td></tr>
+            <tr><td>9/30</td><td>仙台</td><td>仙台站附近</td></tr>
+            <tr><td>10/1</td><td>仙台</td><td>连续第二晚</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <div class="footer">时间仍然是规划参考，实际出行请以 2026 年秋季 JR、巴士官方时刻表与天气、道路情况为准。</div>
+    </main>
+
+    <aside class="map-panel">
+      <section class="card map-shell" id="overview-map">
+        <div class="map-head">
+          <div>
+            <h2>Google Maps</h2>
+            <p>底图始终保留完整环线；点击地点后放大对应区域，并标记当前选择。</p>
+          </div>
+          <div class="map-badge">Live Map</div>
+        </div>
+        <div class="map-frame">
+          <iframe id="googleMapFrame" src="https://maps.google.com/maps?saddr=38.1399076%2C140.9171139&amp;daddr=39.7014371%2C141.136723+to%3A40.8288462%2C140.7342745+to%3A40.4284986%2C140.8946115+to%3A40.4899618%2C140.9525486+to%3A40.5092744%2C141.4311735+to%3A40.190288%2C141.77073+to%3A39.6402709%2C141.9465795+to%3A39.6522818%2C141.9787621+to%3A38.2601316%2C140.8824375+to%3A38.1399076%2C140.9171139&amp;output=embed" data-route-map="https://maps.google.com/maps?saddr=38.1399076%2C140.9171139&amp;daddr=39.7014371%2C141.136723+to%3A40.8288462%2C140.7342745+to%3A40.4284986%2C140.8946115+to%3A40.4899618%2C140.9525486+to%3A40.5092744%2C141.4311735+to%3A40.190288%2C141.77073+to%3A39.6402709%2C141.9465795+to%3A39.6522818%2C141.9787621+to%3A38.2601316%2C140.8824375+to%3A38.1399076%2C140.9171139&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="东北旅行完整路线 Google Maps"></iframe>
+          <div class="map-focus-marker" id="mapFocusMarker" aria-hidden="true">
+            <span class="map-pin"></span>
+            <span class="map-focus-label" id="mapFocusLabel"></span>
+          </div>
+          <div class="map-focus-inset" id="mapFocusInset" aria-hidden="true">
+            <span class="map-inset-label" id="mapInsetLabel"></span>
+            <iframe id="mapFocusFrame" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="选中地点局部地图"></iframe>
+          </div>
+          <div class="map-route-chip" id="mapRouteChip">完整环线 · 东北总览</div>
+        </div>
+        <div class="map-toolbar">
+          <button class="map-button is-active" data-focus="" data-zoom="8" aria-pressed="true">
+            <strong>东北总览</strong>
+            <span>显示仙台至三陆海岸完整环线</span>
+          </button>
+          <button class="map-button" data-focus="38.1399076,140.9171139" data-zoom="12" aria-pressed="false">
+            <strong>仙台机场</strong>
+            <span>进出境节点</span>
+          </button>
+          <button class="map-button" data-focus="39.7014371,141.136723" data-zoom="13" aria-pressed="false">
+            <strong>盛冈站</strong>
+            <span>北上起点</span>
+          </button>
+          <button class="map-button" data-focus="39.7006,141.1503" data-zoom="14" aria-pressed="false">
+            <strong>盛冈城迹</strong>
+            <span>9/26 市区游览核心</span>
+          </button>
+          <button class="map-button" data-focus="40.8288462,140.7342745" data-zoom="13" aria-pressed="false">
+            <strong>青森站</strong>
+            <span>十和田湖出发地</span>
+          </button>
+          <button class="map-button" data-focus="40.4284986,140.8946115" data-zoom="13" aria-pressed="false">
+            <strong>十和田湖</strong>
+            <span>休屋・JR 巴士到达点</span>
+          </button>
+          <button class="map-button" data-focus="40.4899618,140.9525486" data-zoom="13" aria-pressed="false">
+            <strong>奥入濑溪流</strong>
+            <span>徒步精华段</span>
+          </button>
+          <button class="map-button" data-focus="40.5092744,141.4311735" data-zoom="13" aria-pressed="false">
+            <strong>八户站</strong>
+            <span>JR 八户线起点</span>
+          </button>
+          <button class="map-button" data-focus="40.190288,141.77073" data-zoom="13" aria-pressed="false">
+            <strong>久慈站</strong>
+            <span>换乘三陆铁道</span>
+          </button>
+          <button class="map-button" data-focus="39.6402709,141.9465795" data-zoom="13" aria-pressed="false">
+            <strong>宫古站</strong>
+            <span>三陆海岸住宿地</span>
+          </button>
+          <button class="map-button" data-focus="39.6522818,141.9787621" data-zoom="14" aria-pressed="false">
+            <strong>净土滨</strong>
+            <span>9/30 海岸散策</span>
+          </button>
+          <button class="map-button" data-focus="40.6079516,140.4637166" data-zoom="13" aria-pressed="false">
+            <strong>弘前</strong>
+            <span>奥入濑雨天替代</span>
+          </button>
+          <button class="map-button" data-focus="38.2601316,140.8824375" data-zoom="13" aria-pressed="false">
+            <strong>仙台站</strong>
+            <span>最后两晚基地</span>
+          </button>
+          <button class="map-button" data-focus="38.3678491,141.0589956" data-zoom="13" aria-pressed="false">
+            <strong>松岛海岸</strong>
+            <span>10/1 半日游</span>
+          </button>
+        </div>
+        <a class="fullmap-link" href="https://www.google.com/maps/dir/38.1399076,140.9171139/39.7014371,141.136723/40.8288462,140.7342745/40.4284986,140.8946115/40.4899618,140.9525486/40.5092744,141.4311735/40.190288,141.77073/39.6402709,141.9465795/39.6522818,141.9787621/38.2601316,140.8824375/38.1399076,140.9171139?entry=ttu" target="_blank" rel="noreferrer">在 Google Maps 打开整条环线</a>
+      </section>
+
+    </aside>
+  </div>
+</div>
+
+<script>
+  const dayTransitRoutes = [
+    {
+      nodes:[
+        { label:"仙台机场", place:"38.1399076,140.9171139" },
+        { label:"仙台站", place:"38.2601316,140.8824375" },
+        { label:"盛冈站", place:"39.7014371,141.136723" }
+      ],
+      modes:["机场线", "东北新干线"]
+    },
+    {
+      nodes:[
+        { label:"盛冈站", place:"Morioka Station" },
+        { label:"盛冈城迹", place:"Morioka Castle Ruins Park" },
+        { label:"红砖馆", place:"Iwate Bank Red Brick Building" },
+        { label:"盛冈站", place:"Morioka Station" }
+      ],
+      modes:["市区巴士", "市区交通", "市区巴士"]
+    },
+    {
+      nodes:[
+        { label:"盛冈站", place:"39.7014371,141.136723" },
+        { label:"新青森站", place:"Shin-Aomori Station" },
+        { label:"青森站", place:"40.8288462,140.7342745" }
+      ],
+      modes:["东北新干线", "JR 奥羽本线"]
+    },
+    {
+      nodes:[
+        { label:"青森站", place:"40.8288462,140.7342745" },
+        { label:"十和田湖休屋", place:"40.4284986,140.8946115" },
+        { label:"奥入濑", place:"40.4899618,140.9525486" },
+        { label:"青森站", place:"40.8288462,140.7342745" }
+      ],
+      modes:["JR 巴士", "JR 巴士", "JR 巴士"]
+    },
+    {
+      nodes:[
+        { label:"青森站", place:"40.8288462,140.7342745" },
+        { label:"八户站", place:"40.5092744,141.4311735" },
+        { label:"久慈站", place:"40.190288,141.77073" },
+        { label:"宫古站", place:"39.6402709,141.9465795" }
+      ],
+      modes:["JR + 新干线", "JR 八户线", "三陆铁道"]
+    },
+    {
+      nodes:[
+        { label:"宫古站", place:"39.6402709,141.9465795" },
+        { label:"净土滨", place:"39.6522818,141.9787621" },
+        { label:"宫古站", place:"39.6402709,141.9465795" },
+        { label:"盛冈站", place:"39.7014371,141.136723" },
+        { label:"仙台站", place:"38.2601316,140.8824375" }
+      ],
+      modes:["当地巴士", "当地巴士", "106 巴士 / JR", "东北新干线"]
+    },
+    {
+      nodes:[
+        { label:"仙台站", place:"38.2601316,140.8824375" },
+        { label:"松岛海岸", place:"38.3678491,141.0589956" },
+        { label:"仙台站", place:"38.2601316,140.8824375" }
+      ],
+      modes:["JR 仙石线", "JR 仙石线"]
+    },
+    {
+      nodes:[
+        { label:"仙台站", place:"38.2601316,140.8824375" },
+        { label:"仙台机场", place:"38.1399076,140.9171139" }
+      ],
+      modes:["仙台机场线"]
+    }
+  ];
+
+  function transitEmbedUrl(origin, destination) {
+    return `https://maps.google.com/maps?saddr=${encodeURIComponent(origin)}&daddr=${encodeURIComponent(destination)}&dirflg=r&output=embed`;
+  }
+
+  function transitLinkUrl(origin, destination) {
+    return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=transit`;
+  }
+
+  document.querySelectorAll(".day-commute").forEach((commute, dayIndex) => {
+    const route = dayTransitRoutes[dayIndex];
+    const map = commute.querySelector("iframe");
+    const mapLink = commute.querySelector(".day-commute-link");
+    const mapChip = commute.querySelector(".transit-chip");
+    const rail = document.createElement("div");
+    const nodes = [];
+    const legs = [];
+    rail.className = "day-route-rail";
+    rail.setAttribute("aria-label", `Day ${dayIndex + 1} 公共交通路段`);
+
+    route.nodes.forEach((node, nodeIndex) => {
+      const nodeElement = document.createElement("div");
+      nodeElement.className = "route-node";
+      nodeElement.innerHTML = `<span>${node.label}</span>`;
+      rail.appendChild(nodeElement);
+      nodes.push(nodeElement);
+
+      if (nodeIndex < route.nodes.length - 1) {
+        const legButton = document.createElement("button");
+        legButton.className = "route-leg";
+        legButton.type = "button";
+        legButton.setAttribute("aria-label", `显示 ${node.label} 至 ${route.nodes[nodeIndex + 1].label} 公共交通线路`);
+        legButton.innerHTML = `<span>${route.modes[nodeIndex]}</span>`;
+        rail.appendChild(legButton);
+        legs.push(legButton);
+      }
+    });
+
+    function showTransitLeg(legIndex) {
+      const origin = route.nodes[legIndex];
+      const destination = route.nodes[legIndex + 1];
+      map.src = transitEmbedUrl(origin.place, destination.place);
+      map.title = `Day ${dayIndex + 1} ${origin.label}至${destination.label}公共交通`;
+      mapLink.href = transitLinkUrl(origin.place, destination.place);
+      mapLink.textContent = `打开 ${origin.label} → ${destination.label}`;
+      mapChip.textContent = `公共交通 · ${origin.label} → ${destination.label}`;
+      legs.forEach((leg, index) => {
+        const active = index === legIndex;
+        leg.classList.toggle("is-active", active);
+        leg.setAttribute("aria-pressed", String(active));
+      });
+      nodes.forEach((node, index) => {
+        node.classList.toggle("is-active", index === legIndex || index === legIndex + 1);
+      });
+    }
+
+    legs.forEach((leg, legIndex) => {
+      leg.addEventListener("click", () => showTransitLeg(legIndex));
+    });
+    commute.querySelector(".day-commute-head").after(rail);
+    showTransitLeg(0);
+  });
+
+  const mapFrame = document.getElementById("googleMapFrame");
+  const mapButtons = document.querySelectorAll(".map-button");
+  const mapFocusMarker = document.getElementById("mapFocusMarker");
+  const mapFocusLabel = document.getElementById("mapFocusLabel");
+  const mapFocusInset = document.getElementById("mapFocusInset");
+  const mapFocusFrame = document.getElementById("mapFocusFrame");
+  const mapInsetLabel = document.getElementById("mapInsetLabel");
+  const mapRouteChip = document.getElementById("mapRouteChip");
+  const routeMapView = { lat:39.484454, lng:141.268268, zoom:7 };
+
+  function projectToWorld(lat, lng, zoom) {
+    const scale = 256 * (2 ** zoom);
+    const sin = Math.sin(lat * Math.PI / 180);
+    return {
+      x:(lng + 180) / 360 * scale,
+      y:(.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale
+    };
+  }
+
+  function focusRouteMap(button) {
+    const focus = button.dataset.focus;
+    const placeName = button.querySelector("strong").textContent;
+
+    if (!focus) {
+      mapFrame.title = "东北旅行完整路线 Google Maps";
+      mapFocusMarker.classList.remove("is-visible");
+      mapFocusInset.classList.remove("is-visible", "is-left");
+      mapFocusInset.setAttribute("aria-hidden", "true");
+      mapRouteChip.textContent = "完整环线 · 东北总览";
+      return;
+    }
+
+    const [lat, lng] = focus.split(",").map(Number);
+    const point = projectToWorld(lat, lng, routeMapView.zoom);
+    const center = projectToWorld(routeMapView.lat, routeMapView.lng, routeMapView.zoom);
+    const width = mapFrame.clientWidth;
+    const height = mapFrame.clientHeight;
+    const pointX = width / 2 + point.x - center.x;
+    const pointY = height / 2 + point.y - center.y;
+    const markerX = Math.max(36, Math.min(width - 36, pointX));
+    const markerY = Math.max(58, Math.min(height - 36, pointY));
+
+    mapFrame.title = `东北完整路线 · 聚焦${placeName}`;
+    mapFocusMarker.style.left = `${markerX}px`;
+    mapFocusMarker.style.top = `${markerY}px`;
+    mapFocusLabel.textContent = placeName;
+    mapFocusMarker.classList.add("is-visible");
+    mapInsetLabel.textContent = `${placeName} · 局部放大`;
+    mapFocusFrame.src = `https://maps.google.com/maps?q=${focus}&z=${button.dataset.zoom}&output=embed`;
+    mapFocusInset.classList.toggle("is-left", markerX > width * .58);
+    mapFocusInset.classList.add("is-visible");
+    mapFocusInset.setAttribute("aria-hidden", "false");
+    mapRouteChip.textContent = `完整环线 · 聚焦 ${placeName}`;
+  }
+
+  mapButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      mapButtons.forEach((item) => {
+        item.classList.remove("is-active");
+        item.setAttribute("aria-pressed", "false");
+      });
+      button.classList.add("is-active");
+      button.setAttribute("aria-pressed", "true");
+      focusRouteMap(button);
+    });
+  });
+
+  window.addEventListener("resize", () => {
+    const activeButton = document.querySelector(".map-button.is-active");
+    if (activeButton?.dataset.focus) focusRouteMap(activeButton);
+  });
+</script>
+</body>
+</html>
