@@ -21,7 +21,7 @@ function buildStayGroups(days) {
       checkoutDate,
       nights: 1,
       dayNumbers: [day.day],
-      arrival: day.routeNodes.at(-1).label,
+      arrival: day.stayArrival ?? day.routeNodes.at(-1).label,
     });
     return groups;
   }, []);
