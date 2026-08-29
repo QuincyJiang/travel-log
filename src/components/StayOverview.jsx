@@ -28,7 +28,7 @@ function buildStayGroups(days) {
 }
 
 const mapLink = (area) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${area} Japan hotels`)}`;
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(area)}`;
 
 export default function StayOverview({ days }) {
   const stays = buildStayGroups(days);
@@ -41,7 +41,7 @@ export default function StayOverview({ days }) {
           <span className="section-index">02 / STAYS</span>
           <h2 id="stay-overview-title">住宿安排</h2>
         </div>
-        <p>{stays.length} 个住宿地，共 {totalNights} 晚。车站步行范围优先，减少换乘日搬运行李。</p>
+        <p>{stays.length} 个住宿地，共 {totalNights} 晚。</p>
       </div>
 
       <div className="stay-grid">
@@ -65,17 +65,11 @@ export default function StayOverview({ days }) {
               <span>→</span>
               <strong>{stay.checkoutDate}</strong>
             </div>
-            <dl>
-              <div>
-                <dt><BedDouble size={14} strokeWidth={1.8} />晚数</dt>
-                <dd>{stay.nights} 晚</dd>
-              </div>
-              <div>
-                <dt><MapPin size={14} strokeWidth={1.8} />区域</dt>
-                <dd>{stay.area}</dd>
-              </div>
-            </dl>
-            <p>Day {stay.dayNumbers.join("–")} · 抵达 {stay.arrival}</p>
+            <div className="stay-card-meta">
+              <span><BedDouble size={13} strokeWidth={1.8} />{stay.nights} 晚</span>
+              <span><MapPin size={13} strokeWidth={1.8} />{stay.arrival}</span>
+              <span>Day {stay.dayNumbers.join("–")}</span>
+            </div>
           </article>
         ))}
       </div>

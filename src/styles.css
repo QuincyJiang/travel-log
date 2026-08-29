@@ -322,19 +322,19 @@ button, input, textarea { font: inherit; }
 .overview-node b { font-size: 11px; font-weight: 600; }
 
 .stay-overview {
-  padding: 96px 0 24px;
+  padding: 72px 0 16px;
 }
 
 .stay-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   border-top: 1px solid var(--line);
   border-left: 1px solid var(--line);
 }
 
 .stay-card {
   min-width: 0;
-  padding: 24px;
+  padding: 16px 18px;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background: rgba(255, 253, 248, 0.62);
@@ -366,8 +366,8 @@ button, input, textarea { font: inherit; }
 
 .stay-card-head a {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   place-items: center;
   border: 1px solid rgba(23, 24, 20, 0.2);
   border-radius: 50%;
@@ -379,56 +379,40 @@ button, input, textarea { font: inherit; }
 }
 
 .stay-card h3 {
-  margin: 24px 0 20px;
+  margin: 12px 0 10px;
   font-family: var(--display);
-  font-size: 34px;
-  line-height: 1;
+  font-size: 21px;
+  line-height: 1.15;
 }
 
 .stay-dates {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid rgba(23, 24, 20, 0.16);
+  gap: 6px;
 }
 
 .stay-dates strong {
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .stay-dates span {
   color: var(--red);
 }
 
-.stay-card dl {
-  margin: 14px 0 0;
-}
-
-.stay-card dl div {
+.stay-card-meta {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px 12px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(23, 24, 20, 0.16);
 }
 
-.stay-card dt {
+.stay-card-meta span {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 10px;
-}
-
-.stay-card dd {
-  margin: 0;
-  font-size: 10px;
-  font-weight: 700;
-  text-align: right;
-}
-
-.stay-card > p {
-  margin: 20px 0 0;
+  gap: 5px;
   color: var(--muted);
   font-size: 9px;
   letter-spacing: 0.06em;
@@ -719,7 +703,13 @@ button, input, textarea { font: inherit; }
   font-size: 18px;
 }
 
-.food-map-head a {
+.food-map-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.food-map-head .food-map-link {
   display: grid;
   flex: 0 0 auto;
   width: 38px;
@@ -730,9 +720,22 @@ button, input, textarea { font: inherit; }
   transition: background 0.2s ease, color 0.2s ease;
 }
 
-.food-map-head a:hover {
+.food-map-head .food-map-link:hover {
   background: var(--ink);
   color: white;
+}
+
+.food-map-head .food-source-link {
+  padding: 7px 10px;
+  border: 1px solid rgba(23, 24, 20, 0.16);
+  border-radius: 999px;
+  color: var(--red);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.food-map-head .food-source-link:hover {
+  border-color: var(--red);
 }
 
 .food-map-card iframe {
@@ -825,10 +828,10 @@ button, input, textarea { font: inherit; }
   .metrics strong { font-size: 30px; }
   .overview-map { margin: 0 -12px; padding: 50px 12px 44px; }
   .overview-map-frame { height: 430px; min-height: 0; border-radius: 3px 44px 3px 3px; }
-  .stay-overview { padding-top: 68px; }
+  .stay-overview { padding-top: 54px; }
   .stay-grid { grid-template-columns: 1fr; }
-  .stay-card { padding: 22px 20px; }
-  .stay-card h3 { font-size: 30px; }
+  .stay-card { padding: 15px 16px; }
+  .stay-card h3 { font-size: 20px; }
   .itinerary { padding-top: 72px; }
   .day-card { grid-template-columns: 58px 96px 1fr; gap: 12px; padding: 20px 0; }
   .day-card-date span { font-size: 23px; }

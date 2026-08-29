@@ -4,17 +4,20 @@ import SiteFooter from "../components/SiteFooter";
 import { trips } from "../data/trips";
 
 export default function HomePage() {
+  const years = trips.map((trip) => trip.dateRange.slice(0, 4)).sort();
+  const archivePeriod = years.length > 1 ? `${years[0]}—${years.at(-1)}` : years[0];
+
   return (
     <div className="page-shell home-page">
       <SiteHeader />
       <main>
         <section className="home-hero">
           <div className="home-title-wrap">
-            <span className="hero-seal">SINCE<br />2026</span>
+            <span className="hero-seal">SINCE<br />{years[0]}</span>
             <h1>行旅志</h1>
           </div>
           <div className="home-intro">
-            <span>{String(trips.length).padStart(2, "0")} JOURNEY · {trips[0]?.period}</span>
+            <span>{String(trips.length).padStart(2, "0")} JOURNEYS · {archivePeriod}</span>
           </div>
         </section>
 

@@ -69,15 +69,23 @@ export default function FoodMap({ food }) {
               <span>{food.area}</span>
               <strong>{activeRestaurant.name}</strong>
             </div>
-            <a
-              href={mapLink(activeRestaurant.query)}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={`在 Google Maps 打开 ${activeRestaurant.name}`}
-              title="在 Google Maps 打开"
-            >
-              <ExternalLink size={17} strokeWidth={1.8} />
-            </a>
+            <div className="food-map-actions">
+              {activeRestaurant.source && (
+                <a className="food-source-link" href={activeRestaurant.source} target="_blank" rel="noreferrer">
+                  小红书原帖
+                </a>
+              )}
+              <a
+                className="food-map-link"
+                href={mapLink(activeRestaurant.query)}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`在 Google Maps 打开 ${activeRestaurant.name}`}
+                title="在 Google Maps 打开"
+              >
+                <ExternalLink size={17} strokeWidth={1.8} />
+              </a>
+            </div>
           </div>
           <iframe
             key={activeRestaurant.query}
