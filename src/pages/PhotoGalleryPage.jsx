@@ -407,7 +407,7 @@ export default function PhotoGalleryPage() {
   };
 
   const updateFeaturedSelection = async (targetPhotos, featured) => {
-    const response = await fetch("/api/photos", {
+    const response = await fetch("/api/admin/photos", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -602,7 +602,7 @@ export default function PhotoGalleryPage() {
     try {
       for (let index = 0; index < selectedPhotos.length; index += 100) {
         const batch = selectedPhotos.slice(index, index + 100);
-        const response = await fetch("/api/photos", {
+        const response = await fetch("/api/admin/photos", {
           method: "DELETE",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({

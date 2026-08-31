@@ -55,6 +55,12 @@ const extensionForType = (type) => ({
 }[type]);
 
 const CHECKSUM_LEASE_MS = 15 * 60 * 1000;
+const ADMIN_PHOTOS_PATH = "/api/admin/photos";
+
+const requireAdminPhotosPath = (request) =>
+  new URL(request.url).pathname === ADMIN_PHOTOS_PATH
+    ? null
+    : json({ error: "Not found" }, { status: 404 });
 
 const parseReservation = async (object) => {
   try {
@@ -157,6 +163,9 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
+  const pathError = requireAdminPhotosPath(request);
+  if (pathError) return pathError;
+
   let bucket;
   let writtenKeys = [];
   let markerKey;
@@ -303,6 +312,9 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestDelete({ request, env }) {
+  const pathError = requireAdminPhotosPath(request);
+  if (pathError) return pathError;
+
   try {
     const payload = await request.json();
     const photos = Array.isArray(payload.photos) ? payload.photos : [payload];
@@ -377,6 +389,9 @@ export async function onRequestDelete({ request, env }) {
 }
 
 export async function onRequestPatch({ request, env }) {
+  const pathError = requireAdminPhotosPath(request);
+  if (pathError) return pathError;
+
   try {
     const startedAt = Date.now();
     const payload = await request.json();

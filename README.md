@@ -21,7 +21,7 @@ npm run preview
 每个旅程包含“行程攻略 / 影像相册”切换：
 
 - 公开行程攻略：`/trips/:tripId`
-- 登录后相册：`/photos/:tripId`
+- 公开相册：`/photos/:tripId`
 - 登录后上传管理：`/manage/photos`
 
 管理页支持批量选择 JPEG、PNG、WebP。原图保持原始格式和画质写入 R2；浏览器仅额外生成一张 WebP 小预览图供相册网格使用，灯箱加载原图。删除照片时会删除原图、预览图与元数据。
@@ -60,7 +60,7 @@ binding = "TRAVEL_PHOTOS"
 bucket_name = "travel-log"
 ```
 
-当前项目由 Worker 同时托管 Vite 静态资源与 `/api/*` 相册接口。旅行攻略保持公开，相册、上传页及照片文件通过 Cloudflare Access 统一登录保护。
+当前项目由 Worker 同时托管 Vite 静态资源与 `/api/*` 相册接口。旅行攻略、相册、照片列表和照片文件保持公开；上传、删除和精选等写操作通过 Cloudflare Access 统一登录保护。
 
 Cloudflare Builds 配置：
 
@@ -74,15 +74,14 @@ Cloudflare Builds 配置：
 
 ### Cloudflare Access 登录保护
 
-必须在部署移除 `ADMIN_TOKEN` 的版本前完成 Access 配置。打开 **Cloudflare Zero Trust → Access → Applications → Add an application → Self-hosted**，创建一个应用，并添加当前网站域名下的三个受保护路径：
+必须在部署移除 `ADMIN_TOKEN` 的版本前完成 Access 配置。打开 **Cloudflare Zero Trust → Access → Applications → Add an application → Self-hosted**，创建一个应用，并添加当前网站域名下的两个受保护路径：
 
 ```text
-你的域名/photos/*
 你的域名/manage/photos*
-你的域名/api/*
+你的域名/api/admin/*
 ```
 
-如果界面不允许一个应用填写多个路径，就创建三个 Self-hosted 应用并复用同一条策略。策略建议：
+如果界面不允许一个应用填写多个路径，就创建两个 Self-hosted 应用并复用同一条策略。策略建议：
 
 - Action：`Allow`
 - Include：`Emails`
@@ -92,11 +91,13 @@ Cloudflare Builds 配置：
 保存后分别用无痕窗口验证：
 
 - `/trips/qinghai-hexi-2025`：无需登录即可打开。
-- `/photos/qinghai-hexi-2025`：跳转 Cloudflare Access 登录。
+- `/photos/qinghai-hexi-2025`：无需登录即可打开。
 - `/manage/photos`：跳转 Cloudflare Access 登录。
-- `/api/photos?tripId=qinghai-hexi-2025`：跳转 Cloudflare Access 登录。
+- `/api/photos?tripId=qinghai-hexi-2025`：无需登录即可返回照片列表。
+- `/api/photo-file?key=...`：无需登录即可读取有效照片。
+- 向 `/api/admin/photos` 发起 `POST`、`PATCH` 或 `DELETE`：需要登录。
 
-浏览器登录 Access 后会自动携带认证 Cookie，上传和删除不再需要额外管理密钥。R2 存储桶保持私有，相册原图只通过受 Access 保护的 Worker 接口读取；原图不压缩且 EXIF/GPS 不会被移除。
+浏览器登录 Access 后会自动携带认证 Cookie，上传、删除和精选不再需要额外管理密钥。不要再保护 `/photos/*` 或整个 `/api/*`，否则公开相册仍会触发登录。R2 存储桶保持私有，照片只通过 Worker 中经过严格 key 校验的只读接口公开；原图不压缩且 EXIF/GPS 不会被移除。
 
 R2 不需要开启 `r2.dev` 或配置公开域名。
 

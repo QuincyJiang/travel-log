@@ -244,7 +244,7 @@ export default function PhotoManagerPage() {
     formData.append("thumbnail", metadata.thumbnail, "thumbnail.webp");
 
     setItems((current) => updateItem(current, item.id, { status: "uploading" }));
-    const response = await fetch("/api/photos", {
+    const response = await fetch("/api/admin/photos", {
       method: "POST",
       body: formData,
     });
@@ -319,7 +319,7 @@ export default function PhotoManagerPage() {
     setDeletingId(photo.id);
     setMessage("");
     try {
-      const response = await fetch("/api/photos", {
+      const response = await fetch("/api/admin/photos", {
         method: "DELETE",
         headers: {
           "content-type": "application/json",
