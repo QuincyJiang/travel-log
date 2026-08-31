@@ -24,7 +24,7 @@ export default function App() {
       <Switch>
         <Route path="/" component={HomePage} />
         <Route path="/manage/photos" component={PhotoManagerPage} />
-        <Route path="/trips/:tripId/photos" component={PhotoGalleryPage} />
+        <Route path="/photos/:tripId" component={PhotoGalleryPage} />
         <Route path="/trips/:tripId/day/:dayNumber" component={DayPage} />
         <Route path="/trips/:tripId" component={TripPage} />
         <Route component={NotFoundPage} />

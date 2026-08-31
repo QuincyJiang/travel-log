@@ -9,24 +9,6 @@ export const json = (data, init = {}) => {
   return new Response(JSON.stringify(data), { ...init, headers });
 };
 
-const digest = async (value) => {
-  const bytes = new TextEncoder().encode(value);
-  return new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-};
-
-export async function isAdminRequest(request, env) {
-  if (!env.ADMIN_TOKEN) return false;
-
-  const authorization = request.headers.get("authorization") ?? "";
-  const providedToken = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  const [providedHash, expectedHash] = await Promise.all([
-    digest(providedToken),
-    digest(env.ADMIN_TOKEN),
-  ]);
-
-  return providedHash.every((byte, index) => byte === expectedHash[index]);
-}
-
 export function requirePhotoBucket(env) {
   if (!env.TRAVEL_PHOTOS) {
     throw new Error("TRAVEL_PHOTOS R2 binding is not configured");

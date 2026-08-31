@@ -1,6 +1,5 @@
 import {
   imageLimits,
-  isAdminRequest,
   json,
   listTripPhotos,
   photoPrefix,
@@ -21,16 +20,6 @@ const extensionForType = (type) => ({
   "image/webp": "webp",
 }[type]);
 
-const unauthorized = (env) =>
-  json(
-    {
-      error: env.ADMIN_TOKEN
-        ? "管理密钥无效"
-        : "Cloudflare Secret ADMIN_TOKEN 尚未配置",
-    },
-    { status: env.ADMIN_TOKEN ? 401 : 503 },
-  );
-
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
@@ -48,8 +37,6 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!(await isAdminRequest(request, env))) return unauthorized(env);
-
   let bucket;
   let writtenKeys = [];
 
@@ -128,8 +115,6 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestDelete({ request, env }) {
-  if (!(await isAdminRequest(request, env))) return unauthorized(env);
-
   try {
     const { tripId, day, photoId } = await request.json();
     if (!validTripId(tripId) || !validDay(day) || !validPhotoId(photoId)) {

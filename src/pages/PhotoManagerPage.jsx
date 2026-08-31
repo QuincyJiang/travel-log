@@ -26,7 +26,6 @@ export default function PhotoManagerPage() {
   const trip = useMemo(() => trips.find((item) => item.id === tripId), [tripId]);
   const [day, setDay] = useState(trip.days[0].day);
   const [place, setPlace] = useState("");
-  const [token, setToken] = useState(() => sessionStorage.getItem("travel-photo-admin-token") ?? "");
   const [items, setItems] = useState([]);
   const itemsRef = useRef(items);
   const tripIdRef = useRef(tripId);
@@ -124,7 +123,6 @@ export default function PhotoManagerPage() {
     setItems((current) => updateItem(current, item.id, { status: "uploading" }));
     const response = await fetch("/api/photos", {
       method: "POST",
-      headers: { authorization: `Bearer ${token}` },
       body: formData,
     });
     const data = await response.json();
@@ -135,16 +133,11 @@ export default function PhotoManagerPage() {
   const uploadAll = async (event) => {
     event.preventDefault();
     const pending = items.filter((item) => item.status !== "done");
-    if (!token.trim()) {
-      setMessage("请输入 Cloudflare 中配置的管理密钥。");
-      return;
-    }
     if (!pending.length) {
       setMessage("请先选择照片。");
       return;
     }
 
-    sessionStorage.setItem("travel-photo-admin-token", token);
     setUploading(true);
     setMessage("");
     let failures = 0;
@@ -177,20 +170,14 @@ export default function PhotoManagerPage() {
   };
 
   const deletePhoto = async (photo) => {
-    if (!token.trim()) {
-      setMessage("请输入 Cloudflare 中配置的管理密钥。");
-      return;
-    }
     if (!window.confirm(`确认删除 Day ${photo.day} 的这张照片？原图也会一并删除。`)) return;
 
-    sessionStorage.setItem("travel-photo-admin-token", token);
     setDeletingId(photo.id);
     setMessage("");
     try {
       const response = await fetch("/api/photos", {
         method: "DELETE",
         headers: {
-          authorization: `Bearer ${token}`,
           "content-type": "application/json",
         },
         body: JSON.stringify({
@@ -220,7 +207,7 @@ export default function PhotoManagerPage() {
             <h1>批量上传</h1>
             <p>R2 保存未压缩原图；相册网格使用浏览器生成的小预览图，点开后加载原图。</p>
           </div>
-          <Link className="text-link" href={`/trips/${trip.id}/photos`}>查看相册 →</Link>
+          <Link className="text-link" href={`/photos/${trip.id}`}>查看相册 →</Link>
         </section>
 
         <form className="upload-panel" onSubmit={uploadAll}>
@@ -242,10 +229,6 @@ export default function PhotoManagerPage() {
             <label>
               <span>地点</span>
               <input disabled={uploading} value={place} onChange={(event) => setPlace(event.target.value)} maxLength={60} placeholder="例如：哈拉湖" />
-            </label>
-            <label>
-              <span>管理密钥</span>
-              <input value={token} onChange={(event) => setToken(event.target.value)} type="password" autoComplete="current-password" placeholder="ADMIN_TOKEN" />
             </label>
           </div>
 

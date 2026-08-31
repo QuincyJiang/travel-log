@@ -20,8 +20,9 @@ npm run preview
 
 每个旅程包含“行程攻略 / 影像相册”切换：
 
-- 相册：`/trips/:tripId/photos`
-- 私有上传管理：`/manage/photos`
+- 公开行程攻略：`/trips/:tripId`
+- 登录后相册：`/photos/:tripId`
+- 登录后上传管理：`/manage/photos`
 
 管理页支持批量选择 JPEG、PNG、WebP。原图保持原始格式和画质写入 R2；浏览器仅额外生成一张 WebP 小预览图供相册网格使用，灯箱加载原图。删除照片时会删除原图、预览图与元数据。
 
@@ -45,7 +46,9 @@ binding = "TRAVEL_PHOTOS"
 bucket_name = "travel-log"
 ```
 
-当前项目由 Worker 同时托管 Vite 静态资源与 `/api/*` 相册接口。Cloudflare Builds 需要完成以下配置：
+当前项目由 Worker 同时托管 Vite 静态资源与 `/api/*` 相册接口。旅行攻略保持公开，相册、上传页及照片文件通过 Cloudflare Access 统一登录保护。
+
+Cloudflare Builds 配置：
 
 1. 打开 **Workers & Pages → travel-log → Settings → Builds**。
 2. 设置：
@@ -54,30 +57,47 @@ bucket_name = "travel-log"
    - Node version：22
 3. API token 使用 Builds 自动创建的 User Token。它需要 `Workers Scripts: Edit` 与 `Workers R2 Storage: Edit`；不需要 `Cloudflare Pages: Edit`。
 4. 部署成功后，`wrangler.toml` 会自动建立 `TRAVEL_PHOTOS` → `travel-log` R2 binding。
-5. 打开 **Settings → Variables & Secrets**，新增加密 Secret：
-   - Name：`ADMIN_TOKEN`
-   - Value：长度至少 32 位的随机字符串
-6. 保存 Secret 后重新部署。
 
-上传管理页会把管理密钥保存在当前标签页的 `sessionStorage`，不会写入仓库或永久保存在浏览器。所有上传和删除请求都必须携带该密钥。R2 存储桶保持私有，但相册中的原图会通过 Worker 只读接口公开展示；原图不压缩且 EXIF/GPS 不会被移除。
+### Cloudflare Access 登录保护
 
-建议额外使用 **Cloudflare Zero Trust → Access → Applications**，为 `/manage/photos*` 配置只允许个人邮箱访问的 Self-hosted 应用。R2 存储桶本身保持私有，不需要开启 `r2.dev` 或自定义公开域名。
+必须在部署移除 `ADMIN_TOKEN` 的版本前完成 Access 配置。打开 **Cloudflare Zero Trust → Access → Applications → Add an application → Self-hosted**，创建一个应用，并添加当前网站域名下的三个受保护路径：
+
+```text
+你的域名/photos/*
+你的域名/manage/photos*
+你的域名/api/*
+```
+
+如果界面不允许一个应用填写多个路径，就创建三个 Self-hosted 应用并复用同一条策略。策略建议：
+
+- Action：`Allow`
+- Include：`Emails`
+- Value：你的登录邮箱
+- Session duration：按个人使用习惯设置
+
+保存后分别用无痕窗口验证：
+
+- `/trips/qinghai-hexi-2025`：无需登录即可打开。
+- `/photos/qinghai-hexi-2025`：跳转 Cloudflare Access 登录。
+- `/manage/photos`：跳转 Cloudflare Access 登录。
+- `/api/photos?tripId=qinghai-hexi-2025`：跳转 Cloudflare Access 登录。
+
+浏览器登录 Access 后会自动携带认证 Cookie，上传和删除不再需要额外管理密钥。R2 存储桶保持私有，相册原图只通过受 Access 保护的 Worker 接口读取；原图不压缩且 EXIF/GPS 不会被移除。
+
+R2 不需要开启 `r2.dev` 或配置公开域名。
 
 本地调试完整上传流程：
 
 ```bash
 nvm use
-cp .dev.vars.example .dev.vars
-# 修改 .dev.vars 中的 ADMIN_TOKEN
 npm run dev:cloudflare
 ```
 
 本地 Cloudflare 调试使用 Node.js 22 与最新版 Wrangler。打开 `http://localhost:8788/manage/photos`；Wrangler 默认使用本地模拟 R2，不会写入线上存储桶。
 
-通过 Wrangler CLI 部署时，也可以设置 Secret：
+通过 Wrangler CLI 手动部署：
 
 ```bash
-npx wrangler@latest secret put ADMIN_TOKEN
 npm run deploy
 ```
 

@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 
 export default function TripViewNav({ trip }) {
   const [location] = useLocation();
-  const photosPath = `/trips/${trip.id}/photos`;
+  const photosPath = `/photos/${trip.id}`;
   const isPhotos = location === photosPath;
 
   return (
