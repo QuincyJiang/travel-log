@@ -94,7 +94,6 @@ export default function PhotoGalleryPage() {
   const { tripId } = useParams();
   const trip = getTrip(tripId);
   const [photos, setPhotos] = useState([]);
-  const [dayFilter, setDayFilter] = useState("all");
   const [placeFilter, setPlaceFilter] = useState("all");
   const [collection, setCollection] = useState("featured");
   const [activeIndex, setActiveIndex] = useState(null);
@@ -109,6 +108,10 @@ export default function PhotoGalleryPage() {
   const pointerStart = useRef(null);
   const ignoreClickId = useRef("");
   const imageDrag = useRef(null);
+  const imageContentRef = useRef(null);
+  const imageStageRef = useRef(null);
+  const imageViewRef = useRef(imageView);
+  const suppressImageClick = useRef(false);
 
   useEffect(() => {
     if (!trip) return undefined;
@@ -146,13 +149,25 @@ export default function PhotoGalleryPage() {
   const collectionPhotos = collection === "featured" ? featuredPhotos : photos;
   const filteredPhotos = useMemo(
     () =>
-      collectionPhotos.filter(
-        (photo) =>
-          (dayFilter === "all" || photo.day === Number(dayFilter)) &&
-          (placeFilter === "all" || photo.place === placeFilter),
-      ),
-    [collectionPhotos, dayFilter, placeFilter],
+      collectionPhotos
+        .filter((photo) => placeFilter === "all" || photo.place === placeFilter)
+        .sort((left, right) => left.day - right.day),
+    [collectionPhotos, placeFilter],
   );
+  const photoGroups = useMemo(() => {
+    const groups = new Map();
+    filteredPhotos.forEach((photo, index) => {
+      if (!groups.has(photo.day)) groups.set(photo.day, []);
+      groups.get(photo.day).push({ photo, index });
+    });
+    return [...groups.entries()]
+      .sort(([leftDay], [rightDay]) => leftDay - rightDay)
+      .map(([day, items]) => ({
+        day,
+        items,
+        itinerary: trip?.days.find((item) => item.day === day),
+      }));
+  }, [filteredPhotos, trip?.days]);
   const activePhoto = activeIndex === null ? null : filteredPhotos[activeIndex];
   const activeExif = activePhoto?.exif ?? parsedExif[activePhoto?.id];
   const photoDetails = activePhoto ? getPhotoDetails({ ...activePhoto, exif: activeExif }) : [];
@@ -171,15 +186,32 @@ export default function PhotoGalleryPage() {
 
   const resetImageView = useCallback(() => {
     imageDrag.current = null;
-    setImageView({ zoom: 1, x: 0, y: 0 });
+    const next = { zoom: 1, x: 0, y: 0 };
+    imageViewRef.current = next;
+    setImageView(next);
   }, []);
 
-  const changeZoom = useCallback((amount) => {
+  const changeZoom = useCallback((amount, focalPoint) => {
     setImageView((current) => {
       const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current.zoom + amount));
-      return zoom === MIN_ZOOM
+      if (zoom === current.zoom) return current;
+      let next = zoom === MIN_ZOOM
         ? { zoom, x: 0, y: 0 }
         : { ...current, zoom };
+      const stage = imageStageRef.current;
+      if (stage && focalPoint && current.zoom > 0 && zoom > MIN_ZOOM) {
+        const bounds = stage.getBoundingClientRect();
+        const focalX = focalPoint.x - bounds.left - bounds.width / 2;
+        const focalY = focalPoint.y - bounds.top - bounds.height / 2;
+        const ratio = zoom / current.zoom;
+        next = {
+          zoom,
+          x: focalX - (focalX - current.x) * ratio,
+          y: focalY - (focalY - current.y) * ratio,
+        };
+      }
+      imageViewRef.current = next;
+      return next;
     });
   }, []);
 
@@ -213,7 +245,7 @@ export default function PhotoGalleryPage() {
     setActiveIndex(null);
     setSelectedIds(new Set());
     setBulkMessage("");
-  }, [collection, dayFilter, placeFilter]);
+  }, [collection, placeFilter]);
 
   useEffect(() => {
     if (placeFilter !== "all" && !places.includes(placeFilter)) {
@@ -224,19 +256,12 @@ export default function PhotoGalleryPage() {
   useEffect(() => {
     if (activeIndex === null || !filteredPhotos.length) return undefined;
     let cancelled = false;
-    const indexes = [
-      activeIndex,
-      (activeIndex - 1 + filteredPhotos.length) % filteredPhotos.length,
-      (activeIndex + 1) % filteredPhotos.length,
-    ];
-    indexes.forEach((index) => {
-      const url = filteredPhotos[index].displayUrl;
-      preloadOriginal(url)
-        .then(() => {
-          if (!cancelled) markOriginalLoaded(url);
-        })
-        .catch(() => {});
-    });
+    const url = filteredPhotos[activeIndex].displayUrl;
+    preloadOriginal(url)
+      .then(() => {
+        if (!cancelled) markOriginalLoaded(url);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -270,29 +295,44 @@ export default function PhotoGalleryPage() {
   };
 
   const startImageDrag = (event) => {
-    if (imageView.zoom === 1) return;
+    if (imageViewRef.current.zoom === 1) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     imageDrag.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      x: imageView.x,
-      y: imageView.y,
+      x: imageViewRef.current.x,
+      y: imageViewRef.current.y,
+      moved: false,
+      latest: imageViewRef.current,
     };
   };
 
   const moveImage = (event) => {
     const drag = imageDrag.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
-    setImageView((current) => ({
-      ...current,
+    const next = {
+      ...imageViewRef.current,
       x: drag.x + event.clientX - drag.startX,
       y: drag.y + event.clientY - drag.startY,
-    }));
+    };
+    drag.latest = next;
+    if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 3) {
+      drag.moved = true;
+    }
+    if (imageContentRef.current) {
+      imageContentRef.current.style.transform = `translate3d(${next.x}px, ${next.y}px, 0) scale(${next.zoom})`;
+    }
   };
 
   const stopImageDrag = (event) => {
-    if (imageDrag.current?.pointerId === event.pointerId) {
+    const drag = imageDrag.current;
+    if (drag?.pointerId === event.pointerId) {
+      if (drag.moved) {
+        suppressImageClick.current = true;
+        imageViewRef.current = drag.latest;
+        setImageView(drag.latest);
+      }
       imageDrag.current = null;
       if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId);
@@ -547,38 +587,26 @@ export default function PhotoGalleryPage() {
 
         {!!photos.length && (
           <section className="photo-filters" aria-label="照片筛选">
-            <div className="photo-filter-stack">
+            <div className="photo-collection-tabs">
+              <span>COLLECTION</span>
               <div>
-                <span>集合</span>
                 <button className={collection === "featured" ? "active" : ""} onClick={() => setCollection("featured")} type="button">
-                  精选 {featuredPhotos.length}
+                  精选 <sup>{String(featuredPhotos.length).padStart(2, "0")}</sup>
                 </button>
                 <button className={collection === "all" ? "active" : ""} onClick={() => setCollection("all")} type="button">
-                  全部 {photos.length}
+                  全部 <sup>{String(photos.length).padStart(2, "0")}</sup>
                 </button>
-              </div>
-              <div>
-                <span>日期</span>
-                <button className={dayFilter === "all" ? "active" : ""} onClick={() => setDayFilter("all")} type="button">全部</button>
-                {trip.days.map((day) => (
-                  <button
-                    className={dayFilter === String(day.day) ? "active" : ""}
-                    key={day.day}
-                    onClick={() => setDayFilter(String(day.day))}
-                    type="button"
-                  >
-                    Day {day.day}
-                  </button>
-                ))}
               </div>
             </div>
             {!!places.length && (
-              <label>
-                <span>地点</span>
-                <select value={placeFilter} onChange={(event) => setPlaceFilter(event.target.value)}>
-                  <option value="all">全部地点</option>
-                  {places.map((place) => <option key={place} value={place}>{place}</option>)}
-                </select>
+              <label className="photo-place-filter">
+                <span>LOCATION</span>
+                <div>
+                  <select value={placeFilter} onChange={(event) => setPlaceFilter(event.target.value)}>
+                    <option value="all">全部地点</option>
+                    {places.map((place) => <option key={place} value={place}>{place}</option>)}
+                  </select>
+                </div>
               </label>
             )}
           </section>
@@ -623,7 +651,7 @@ export default function PhotoGalleryPage() {
           <div className="photo-empty compact">
             <Star size={30} strokeWidth={1.5} />
             <h2>{collection === "featured" ? "还没有精选照片" : "当前筛选下没有照片"}</h2>
-            <p>{collection === "featured" ? "切换到全部照片，通过右键或长按选择照片加入精选。" : "调整日期或地点筛选后重试。"}</p>
+            <p>{collection === "featured" ? "切换到全部照片，通过右键或长按选择照片加入精选。" : "调整地点筛选后重试。"}</p>
             {collection === "featured" && (
               <button className="text-link" type="button" onClick={() => setCollection("all")}>查看全部照片</button>
             )}
@@ -631,38 +659,64 @@ export default function PhotoGalleryPage() {
         )}
 
         {!!filteredPhotos.length && (
-          <section
-            className={`photo-grid ${collection === "featured" ? "featured-photo-grid" : "all-photo-grid"}`}
-            aria-label={`${trip.shortTitle}照片`}
-          >
-            {filteredPhotos.map((photo, index) => (
-              <button
-                key={photo.id}
-                type="button"
-                className={`${selectedIds.has(photo.id) ? "selected" : ""} photo-layout-${index % 8}`}
-                aria-pressed={selectedIds.has(photo.id)}
-                onClick={() => openOrSelectPhoto(photo, index)}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  if (ignoreClickId.current === photo.id) return;
-                  toggleSelection(photo.id);
-                }}
-                onPointerCancel={cancelLongPress}
-                onPointerDown={(event) => startLongPress(event, photo.id)}
-                onPointerLeave={cancelLongPress}
-                onPointerMove={moveLongPress}
-                onPointerUp={cancelLongPress}
-                style={{ aspectRatio: photo.width && photo.height ? `${photo.width} / ${photo.height}` : "4 / 3" }}
-              >
-                <img src={photo.thumbnailUrl} alt={photo.caption || photo.place || `Day ${photo.day}`} loading="lazy" />
-                <i className="photo-selection-indicator"><Check size={15} strokeWidth={2.4} /></i>
-                <span>
-                  <b>Day {photo.day}</b>
-                  <small>{photo.place || photo.caption || "旅行影像"}</small>
-                </span>
-              </button>
-            ))}
-          </section>
+          <div className="photo-gallery-layout">
+            <div className="photo-gallery-stream" aria-label={`${trip.shortTitle}照片`}>
+              {photoGroups.map((group) => (
+                <section className="photo-chapter" id={`photo-day-${group.day}`} key={group.day}>
+                  <header>
+                    <div>
+                      <span>CHAPTER {String(group.day).padStart(2, "0")}</span>
+                      <h2>Day {group.day}</h2>
+                    </div>
+                    <p>{group.itinerary?.date}{group.itinerary?.title ? ` / ${group.itinerary.title}` : ""}</p>
+                  </header>
+                  <div className="photo-grid editorial-photo-grid">
+                    {group.items.map(({ photo, index }, chapterIndex) => (
+                      <button
+                        key={photo.id}
+                        type="button"
+                        className={`${selectedIds.has(photo.id) ? "selected" : ""} photo-layout-${chapterIndex % 8}`}
+                        aria-pressed={selectedIds.has(photo.id)}
+                        onClick={() => openOrSelectPhoto(photo, index)}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          if (ignoreClickId.current === photo.id) return;
+                          toggleSelection(photo.id);
+                        }}
+                        onPointerCancel={cancelLongPress}
+                        onPointerDown={(event) => startLongPress(event, photo.id)}
+                        onPointerLeave={cancelLongPress}
+                        onPointerMove={moveLongPress}
+                        onPointerUp={cancelLongPress}
+                        style={{ aspectRatio: photo.width && photo.height ? `${photo.width} / ${photo.height}` : "4 / 3" }}
+                      >
+                        <img src={photo.thumbnailUrl} alt={photo.caption || photo.place || `Day ${photo.day}`} loading="lazy" />
+                        <i className="photo-selection-indicator"><Check size={15} strokeWidth={2.4} /></i>
+                        <span>
+                          <b>{String(index + 1).padStart(2, "0")}</b>
+                          <small>{photo.place || photo.caption || "旅行影像"}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+            <aside className="photo-timeline" aria-label="相册时间轴">
+              <span>JOURNEY</span>
+              <ol>
+                {photoGroups.map((group) => (
+                  <li key={group.day}>
+                    <a href={`#photo-day-${group.day}`}>
+                      <i />
+                      <span>Day {group.day}</span>
+                      <small>{group.itinerary?.date}</small>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </aside>
+          </div>
         )}
 
         <div className="back-row"><Link className="text-link" href={`/trips/${trip.id}`}>← 返回行程攻略</Link></div>
@@ -708,9 +762,17 @@ export default function PhotoGalleryPage() {
           <figure>
             <div
               className={`lightbox-image-stage ${imageView.zoom > 1 ? "zoomed" : ""} ${imageDrag.current ? "dragging" : ""}`}
-              onDoubleClick={() => {
-                if (imageView.zoom === 1) changeZoom(1);
-                else resetImageView();
+              ref={imageStageRef}
+              onClick={(event) => {
+                if (suppressImageClick.current) {
+                  suppressImageClick.current = false;
+                  return;
+                }
+                if (imageViewRef.current.zoom === MIN_ZOOM) {
+                  changeZoom(1, { x: event.clientX, y: event.clientY });
+                } else {
+                  resetImageView();
+                }
               }}
               onPointerCancel={stopImageDrag}
               onPointerDown={startImageDrag}
@@ -718,13 +780,16 @@ export default function PhotoGalleryPage() {
               onPointerUp={stopImageDrag}
               onWheel={(event) => {
                 event.preventDefault();
-                changeZoom(event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP);
+                changeZoom(
+                  event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP,
+                  { x: event.clientX, y: event.clientY },
+                );
               }}
-              style={{ aspectRatio: activePhoto.width && activePhoto.height ? `${activePhoto.width} / ${activePhoto.height}` : "4 / 3" }}
             >
               <div
                 className="lightbox-image-content"
-                style={{ transform: `translate(${imageView.x}px, ${imageView.y}px) scale(${imageView.zoom})` }}
+                ref={imageContentRef}
+                style={{ transform: `translate3d(${imageView.x}px, ${imageView.y}px, 0) scale(${imageView.zoom})` }}
               >
                 <img className="lightbox-placeholder" src={activePhoto.thumbnailUrl} alt="" aria-hidden="true" draggable="false" />
                 <img
