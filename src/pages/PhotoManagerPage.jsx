@@ -20,10 +20,33 @@ const defaultCaption = (name) => name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, 
 const updateItem = (items, id, values) =>
   items.map((item) => (item.id === id ? { ...item, ...values } : item));
 
+const tripDateEntries = (trip) => {
+  const match = trip.dateRange.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return [];
+  const [, year, month, day] = match.map(Number);
+  const start = Date.UTC(year, month - 1, day);
+  return trip.days.map((tripDay, index) => {
+    const date = new Date(start + index * 86400000);
+    return {
+      day: tripDay.day,
+      date: date.toISOString().slice(0, 10),
+      title: tripDay.title,
+    };
+  });
+};
+
+const formatDetectedDate = (value) => {
+  if (!value) return "未识别日期";
+  const [, month, day] = value.split("-");
+  return `${Number(month)}/${Number(day)}`;
+};
+
+const legacyPhotoFingerprint = (photo) =>
+  ["legacy", photo.size, photo.width, photo.height, photo.takenAt].join(":");
+
 export default function PhotoManagerPage() {
   const [tripId, setTripId] = useState(initialTripId);
   const trip = useMemo(() => trips.find((item) => item.id === tripId), [tripId]);
-  const [day, setDay] = useState(trip.days[0].day);
   const [place, setPlace] = useState("");
   const [items, setItems] = useState([]);
   const itemsRef = useRef(items);
@@ -32,10 +55,20 @@ export default function PhotoManagerPage() {
   const [deletingId, setDeletingId] = useState("");
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
-  const pendingCount = items.filter((item) => item.status !== "done").length;
-  const allUploaded = items.length > 0 && pendingCount === 0;
-  const currentDayIndex = trip.days.findIndex((item) => item.day === day);
-  const nextDay = trip.days[currentDayIndex + 1];
+  const dates = useMemo(() => tripDateEntries(trip), [trip]);
+  const dayByDate = useMemo(
+    () => new Map(dates.map((entry) => [entry.date, entry.day])),
+    [dates],
+  );
+  const processingCount = items.filter((item) => item.status === "reading").length;
+  const unresolvedCount = items.filter(
+    (item) => item.metadata && !item.day && !["done", "duplicate"].includes(item.status),
+  ).length;
+  const uploadableItems = items.filter(
+    (item) => item.metadata && item.day && ["ready", "error"].includes(item.status),
+  );
+  const allUploaded =
+    items.length > 0 && items.every((item) => ["done", "duplicate"].includes(item.status));
 
   const refreshPhotos = async (activeTripId = trip.id, signal) => {
     const response = await fetch(`/api/photos?tripId=${encodeURIComponent(activeTripId)}`, {
@@ -52,7 +85,6 @@ export default function PhotoManagerPage() {
   useEffect(() => {
     tripIdRef.current = trip.id;
     const controller = new AbortController();
-    setDay(trip.days[0].day);
     setPlace("");
     setItems((current) => {
       current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
@@ -74,7 +106,7 @@ export default function PhotoManagerPage() {
     [],
   );
 
-  const selectFiles = (fileList) => {
+  const selectFiles = async (fileList) => {
     const selected = [...fileList];
     const rejected = selected.filter(
       (file) => !ALLOWED_TYPES.has(file.type) || file.size > MAX_FILE_SIZE,
@@ -83,22 +115,99 @@ export default function PhotoManagerPage() {
       (file) => ALLOWED_TYPES.has(file.type) && file.size <= MAX_FILE_SIZE,
     );
 
-    setItems((current) => [
-      ...current,
-      ...accepted.map((file) => ({
+    const newItems = accepted.map((file) => ({
         id: crypto.randomUUID(),
         file,
         previewUrl: URL.createObjectURL(file),
         caption: defaultCaption(file.name).slice(0, 160),
-        status: "ready",
+        day: null,
+        metadata: null,
+        status: "reading",
         error: "",
-      })),
-    ]);
-    setMessage(
-      rejected.length
-        ? `已忽略 ${rejected.length} 个不支持或超过 50 MB 的文件。`
-        : "",
+      }));
+    setItems((current) => [...current, ...newItems]);
+    setMessage(accepted.length ? `正在识别 ${accepted.length} 张照片的拍摄日期…` : "");
+
+    const parsedResults = new Array(newItems.length);
+    let nextIndex = 0;
+    const parseNext = async () => {
+      while (nextIndex < newItems.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        const item = newItems[index];
+        try {
+          const metadata = await readPhotoDimensions(item.file);
+          const inferredDay = dayByDate.get(metadata.capturedDate) ?? null;
+          parsedResults[index] = {
+            id: item.id,
+            day: inferredDay,
+            metadata,
+            status: "ready",
+            error: "",
+          };
+        } catch (error) {
+          parsedResults[index] = {
+            id: item.id,
+            day: null,
+            metadata: null,
+            status: "error",
+            error: error.message,
+          };
+        }
+      }
+    };
+    await Promise.all(
+      Array.from(
+        { length: Math.min(2, newItems.length) },
+        () => parseNext(),
+      ),
     );
+
+    const knownChecksums = new Set([
+      ...existingPhotos.map((photo) => photo.checksum).filter(Boolean),
+      ...itemsRef.current
+        .filter((item) => !newItems.some((newItem) => newItem.id === item.id))
+        .map((item) => item.metadata?.checksum)
+        .filter(Boolean),
+    ]);
+    const legacyFingerprints = new Set(
+      existingPhotos
+        .filter((photo) => !photo.checksum)
+        .map(legacyPhotoFingerprint),
+    );
+    const results = parsedResults.map((result) => {
+      if (!result.metadata) return result;
+      if (
+        knownChecksums.has(result.metadata.checksum) ||
+        legacyFingerprints.has(legacyPhotoFingerprint(result.metadata))
+      ) {
+        return { ...result, status: "duplicate", error: "已存在，已跳过" };
+      }
+      knownChecksums.add(result.metadata.checksum);
+      return result;
+    });
+    const resultById = new Map(results.map((result) => [result.id, result]));
+    setItems((current) =>
+      current.map((item) => {
+        const result = resultById.get(item.id);
+        return result ? { ...item, ...result } : item;
+      }),
+    );
+
+    const detected = results.filter(
+      (item) => item.day && item.status !== "duplicate",
+    ).length;
+    const duplicates = results.filter((item) => item.status === "duplicate").length;
+    const unresolved = results.filter(
+      (item) => item.metadata && !item.day && item.status !== "duplicate",
+    ).length;
+    const failed = results.filter((item) => !item.metadata).length;
+    const parts = [`自动归类 ${detected} 张`];
+    if (duplicates) parts.push(`跳过重复 ${duplicates} 张`);
+    if (unresolved) parts.push(`${unresolved} 张待选择 Day`);
+    if (failed) parts.push(`${failed} 张读取失败`);
+    if (rejected.length) parts.push(`忽略 ${rejected.length} 张不支持的文件`);
+    setMessage(`${parts.join("，")}。`);
   };
 
   const removeItem = (id) => {
@@ -113,29 +222,26 @@ export default function PhotoManagerPage() {
     items.forEach((item) => URL.revokeObjectURL(item.previewUrl));
     setItems([]);
     setPlace("");
-    if (nextDay) {
-      setDay(nextDay.day);
-      setMessage(`已切换到 Day ${nextDay.day}。`);
-    } else {
-      setMessage("可以继续选择当前旅程的照片。");
-    }
+    setMessage("可以继续选择当前旅程的照片。");
     document.querySelector(".upload-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const uploadItem = async (item) => {
-    setItems((current) => updateItem(current, item.id, { status: "processing", error: "" }));
-    const dimensions = await readPhotoDimensions(item.file);
+    const metadata = item.metadata;
     const formData = new FormData();
     formData.append("tripId", trip.id);
-    formData.append("day", String(day));
+    formData.append("day", String(item.day));
     formData.append("place", place);
     formData.append("caption", item.caption);
-    formData.append("takenAt", dimensions.takenAt);
-    formData.append("exif", JSON.stringify(dimensions.exif));
-    formData.append("width", String(dimensions.width));
-    formData.append("height", String(dimensions.height));
+    formData.append("takenAt", metadata.takenAt);
+    formData.append("capturedDate", metadata.capturedDate);
+    formData.append("checksum", metadata.checksum);
+    formData.append("dateSource", metadata.dateSource);
+    formData.append("exif", JSON.stringify(metadata.exif));
+    formData.append("width", String(metadata.width));
+    formData.append("height", String(metadata.height));
     formData.append("original", item.file, item.file.name);
-    formData.append("thumbnail", dimensions.thumbnail, "thumbnail.webp");
+    formData.append("thumbnail", metadata.thumbnail, "thumbnail.webp");
 
     setItems((current) => updateItem(current, item.id, { status: "uploading" }));
     const response = await fetch("/api/photos", {
@@ -143,13 +249,31 @@ export default function PhotoManagerPage() {
       body: formData,
     });
     const data = await response.json();
+    if (response.status === 409 && data.duplicate) {
+      setItems((current) =>
+        updateItem(current, item.id, {
+          status: "duplicate",
+          error: "已存在，已跳过",
+        }),
+      );
+      return "duplicate";
+    }
     if (!response.ok) throw new Error(data.error || "上传失败");
     setItems((current) => updateItem(current, item.id, { status: "done" }));
+    return "done";
   };
 
   const uploadAll = async (event) => {
     event.preventDefault();
-    const pending = items.filter((item) => item.status !== "done");
+    if (processingCount) {
+      setMessage("照片日期仍在识别中，请稍候。");
+      return;
+    }
+    if (unresolvedCount) {
+      setMessage(`还有 ${unresolvedCount} 张照片需要选择 Day。`);
+      return;
+    }
+    const pending = uploadableItems;
     if (!pending.length) {
       setMessage("请先选择照片。");
       return;
@@ -158,13 +282,14 @@ export default function PhotoManagerPage() {
     setUploading(true);
     setMessage("");
     let failures = 0;
+    let duplicates = 0;
 
     for (let index = 0; index < pending.length; index += 2) {
       const batch = pending.slice(index, index + 2);
       await Promise.all(
         batch.map(async (item) => {
           try {
-            await uploadItem(item);
+            if ((await uploadItem(item)) === "duplicate") duplicates += 1;
           } catch (error) {
             failures += 1;
             setItems((current) =>
@@ -181,8 +306,10 @@ export default function PhotoManagerPage() {
     }
     setMessage(
       failures
-        ? `${pending.length - failures} 张上传成功，${failures} 张失败。`
-        : `${pending.length} 张照片已上传。`,
+        ? `${pending.length - failures - duplicates} 张上传成功，跳过 ${duplicates} 张重复，${failures} 张失败。`
+        : duplicates
+          ? `${pending.length - duplicates} 张上传成功，跳过 ${duplicates} 张重复。`
+          : `${pending.length} 张照片已上传。`,
     );
   };
 
@@ -222,7 +349,7 @@ export default function PhotoManagerPage() {
           <div>
             <span className="eyebrow">PRIVATE PHOTO MANAGER</span>
             <h1>批量上传</h1>
-            <p>按旅程、Day 和地点批量整理照片。</p>
+            <p>按拍摄日期自动归类 Day，再批量整理地点与说明。</p>
           </div>
           <a className="text-link" href={`/photos/${trip.id}`}>查看相册 →</a>
         </section>
@@ -231,16 +358,8 @@ export default function PhotoManagerPage() {
           <div className="upload-fields">
             <label>
               <span>旅程</span>
-              <select disabled={uploading} value={tripId} onChange={(event) => setTripId(event.target.value)}>
+              <select disabled={uploading || processingCount > 0} value={tripId} onChange={(event) => setTripId(event.target.value)}>
                 {trips.map((item) => <option key={item.id} value={item.id}>{item.shortTitle}</option>)}
-              </select>
-            </label>
-            <label>
-              <span>Day</span>
-              <select disabled={uploading} value={day} onChange={(event) => setDay(Number(event.target.value))}>
-                {trip.days.map((item) => (
-                  <option key={item.day} value={item.day}>Day {item.day} · {item.title}</option>
-                ))}
               </select>
             </label>
             <label>
@@ -272,19 +391,50 @@ export default function PhotoManagerPage() {
                     <img src={item.previewUrl} alt="" />
                     <span>
                       {item.status === "done" && <Check size={18} />}
-                      {(item.status === "processing" || item.status === "uploading") && <LoaderCircle className="spin" size={18} />}
+                      {(item.status === "reading" || item.status === "uploading") && <LoaderCircle className="spin" size={18} />}
+                      {item.status === "duplicate" && "已存在"}
                       {item.status === "error" && "失败"}
                     </span>
                   </div>
-                  <input
-                    value={item.caption}
-                    disabled={uploading || item.status === "done"}
-                    onChange={(event) =>
-                      setItems((current) => updateItem(current, item.id, { caption: event.target.value }))
-                    }
-                    maxLength={160}
-                    aria-label={`${item.file.name}说明`}
-                  />
+                  <div className="upload-preview-fields">
+                    <input
+                      value={item.caption}
+                      disabled={uploading || ["done", "duplicate"].includes(item.status)}
+                      onChange={(event) =>
+                        setItems((current) => updateItem(current, item.id, { caption: event.target.value }))
+                      }
+                      maxLength={160}
+                      aria-label={`${item.file.name}说明`}
+                    />
+                    <label>
+                      <span>
+                        {item.metadata
+                          ? `${item.metadata.dateSource === "exif" ? "EXIF" : "文件时间"} · ${formatDetectedDate(item.metadata.capturedDate)}`
+                          : "正在识别日期"}
+                      </span>
+                      <select
+                        className={item.day ? "" : "unresolved"}
+                        value={item.day ?? ""}
+                        disabled={uploading || ["done", "duplicate"].includes(item.status) || !item.metadata}
+                        onChange={(event) =>
+                          setItems((current) =>
+                            updateItem(current, item.id, {
+                              day: event.target.value ? Number(event.target.value) : null,
+                              error: "",
+                            }),
+                          )
+                        }
+                        aria-label={`${item.file.name}所属 Day`}
+                      >
+                        <option value="">选择 Day</option>
+                        {dates.map((entry) => (
+                          <option key={entry.day} value={entry.day}>
+                            Day {entry.day} · {entry.date.slice(5).replace("-", "/")}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   {item.error && <small>{item.error}</small>}
                   <button disabled={uploading} type="button" onClick={() => removeItem(item.id)} aria-label={`移除 ${item.file.name}`}>
                     <Trash2 size={15} />
@@ -298,13 +448,24 @@ export default function PhotoManagerPage() {
             <p aria-live="polite">{message}</p>
             {allUploaded ? (
               <button type="button" onClick={continueUploading}>
-                {nextDay ? `下一天 · Day ${nextDay.day}` : "继续上传"}
+                继续上传
                 <ArrowRight size={17} />
               </button>
             ) : (
-              <button type="submit" disabled={uploading || pendingCount === 0}>
+              <button
+                type="submit"
+                disabled={uploading || processingCount > 0 || unresolvedCount > 0 || uploadableItems.length === 0}
+              >
                 {uploading ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}
-                {uploading ? "正在上传" : pendingCount ? `上传 ${pendingCount} 张` : "请先选择照片"}
+                {uploading
+                  ? "正在上传"
+                  : processingCount
+                    ? `识别中 ${processingCount} 张`
+                    : unresolvedCount
+                      ? `${unresolvedCount} 张待选 Day`
+                      : uploadableItems.length
+                        ? `上传 ${uploadableItems.length} 张`
+                        : "请先选择照片"}
               </button>
             )}
           </div>

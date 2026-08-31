@@ -1,6 +1,7 @@
 import {
   onRequestDelete as deletePhotos,
   onRequestGet as listPhotos,
+  onRequestPatch as updateFeaturedPhoto,
   onRequestPost as uploadPhotos,
 } from "../functions/api/photos";
 import { onRequestGet as getPhotoFile } from "../functions/api/photo-file";
@@ -17,6 +18,7 @@ export default {
     if (url.pathname === "/api/photos") {
       if (request.method === "GET") return listPhotos(context);
       if (request.method === "POST") return uploadPhotos(context);
+      if (request.method === "PATCH") return updateFeaturedPhoto(context);
       if (request.method === "DELETE") return deletePhotos(context);
       return methodNotAllowed();
     }

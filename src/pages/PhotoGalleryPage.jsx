@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "wouter";
-import { Check, Download, Camera, ChevronLeft, ChevronRight, Images, LoaderCircle, Trash2, Upload, X } from "lucide-react";
+import { Check, Download, Camera, ChevronLeft, ChevronRight, Images, LoaderCircle, RotateCcw, Star, Trash2, Upload, X, ZoomIn, ZoomOut } from "lucide-react";
 import { downloadZip } from "client-zip";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
@@ -85,6 +85,10 @@ const safeFilename = (value) =>
     .slice(0, 70);
 
 const MAX_BLOB_ZIP_SIZE = 250 * 1024 * 1024;
+const MAX_FEATURED_PHOTOS = 16;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 5;
+const ZOOM_STEP = 0.5;
 
 export default function PhotoGalleryPage() {
   const { tripId } = useParams();
@@ -92,16 +96,19 @@ export default function PhotoGalleryPage() {
   const [photos, setPhotos] = useState([]);
   const [dayFilter, setDayFilter] = useState("all");
   const [placeFilter, setPlaceFilter] = useState("all");
+  const [collection, setCollection] = useState("featured");
   const [activeIndex, setActiveIndex] = useState(null);
   const [loadedOriginals, setLoadedOriginals] = useState(() => new Set());
   const [parsedExif, setParsedExif] = useState({});
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkAction, setBulkAction] = useState("");
   const [bulkMessage, setBulkMessage] = useState("");
+  const [imageView, setImageView] = useState({ zoom: 1, x: 0, y: 0 });
   const [state, setState] = useState({ loading: true, error: "" });
   const longPressTimer = useRef(null);
   const pointerStart = useRef(null);
   const ignoreClickId = useRef("");
+  const imageDrag = useRef(null);
 
   useEffect(() => {
     if (!trip) return undefined;
@@ -121,17 +128,30 @@ export default function PhotoGalleryPage() {
   }, [trip]);
 
   const places = useMemo(
-    () => [...new Set(photos.map((photo) => photo.place).filter(Boolean))].sort(),
+    () => {
+      const source = collection === "featured"
+        ? photos.filter((photo) => photo.featured)
+        : photos;
+      return [...new Set(source.map((photo) => photo.place).filter(Boolean))].sort();
+    },
+    [collection, photos],
+  );
+  const featuredPhotos = useMemo(
+    () =>
+      photos
+        .filter((photo) => photo.featured)
+        .sort((left, right) => left.featuredOrder - right.featuredOrder),
     [photos],
   );
+  const collectionPhotos = collection === "featured" ? featuredPhotos : photos;
   const filteredPhotos = useMemo(
     () =>
-      photos.filter(
+      collectionPhotos.filter(
         (photo) =>
           (dayFilter === "all" || photo.day === Number(dayFilter)) &&
           (placeFilter === "all" || photo.place === placeFilter),
       ),
-    [dayFilter, photos, placeFilter],
+    [collectionPhotos, dayFilter, placeFilter],
   );
   const activePhoto = activeIndex === null ? null : filteredPhotos[activeIndex];
   const activeExif = activePhoto?.exif ?? parsedExif[activePhoto?.id];
@@ -149,6 +169,20 @@ export default function PhotoGalleryPage() {
     });
   }, []);
 
+  const resetImageView = useCallback(() => {
+    imageDrag.current = null;
+    setImageView({ zoom: 1, x: 0, y: 0 });
+  }, []);
+
+  const changeZoom = useCallback((amount) => {
+    setImageView((current) => {
+      const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current.zoom + amount));
+      return zoom === MIN_ZOOM
+        ? { zoom, x: 0, y: 0 }
+        : { ...current, zoom };
+    });
+  }, []);
+
   useEffect(() => {
     if (!activePhoto) return undefined;
     const onKeyDown = (event) => {
@@ -159,6 +193,9 @@ export default function PhotoGalleryPage() {
       if (event.key === "ArrowRight") {
         setActiveIndex((index) => (index + 1) % filteredPhotos.length);
       }
+      if (event.key === "+" || event.key === "=") changeZoom(ZOOM_STEP);
+      if (event.key === "-") changeZoom(-ZOOM_STEP);
+      if (event.key === "0") resetImageView();
     };
     document.body.classList.add("lightbox-open");
     window.addEventListener("keydown", onKeyDown);
@@ -166,13 +203,23 @@ export default function PhotoGalleryPage() {
       document.body.classList.remove("lightbox-open");
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [activePhoto, filteredPhotos.length]);
+  }, [activePhoto, changeZoom, filteredPhotos.length, resetImageView]);
+
+  useEffect(() => {
+    resetImageView();
+  }, [activePhoto?.id, resetImageView]);
 
   useEffect(() => {
     setActiveIndex(null);
     setSelectedIds(new Set());
     setBulkMessage("");
-  }, [dayFilter, placeFilter]);
+  }, [collection, dayFilter, placeFilter]);
+
+  useEffect(() => {
+    if (placeFilter !== "all" && !places.includes(placeFilter)) {
+      setPlaceFilter("all");
+    }
+  }, [placeFilter, places]);
 
   useEffect(() => {
     if (activeIndex === null || !filteredPhotos.length) return undefined;
@@ -218,7 +265,39 @@ export default function PhotoGalleryPage() {
   if (!trip) return <NotFoundPage />;
 
   const stepPhoto = (direction) => {
+    resetImageView();
     setActiveIndex((index) => (index + direction + filteredPhotos.length) % filteredPhotos.length);
+  };
+
+  const startImageDrag = (event) => {
+    if (imageView.zoom === 1) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    imageDrag.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      x: imageView.x,
+      y: imageView.y,
+    };
+  };
+
+  const moveImage = (event) => {
+    const drag = imageDrag.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    setImageView((current) => ({
+      ...current,
+      x: drag.x + event.clientX - drag.startX,
+      y: drag.y + event.clientY - drag.startY,
+    }));
+  };
+
+  const stopImageDrag = (event) => {
+    if (imageDrag.current?.pointerId === event.pointerId) {
+      imageDrag.current = null;
+      if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    }
   };
 
   const toggleSelection = (photoId) => {
@@ -274,6 +353,80 @@ export default function PhotoGalleryPage() {
       return next;
     });
     setBulkMessage("");
+  };
+
+  const updateFeaturedPhoto = async (photo, featured) => {
+    const response = await fetch("/api/photos", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tripId: photo.tripId,
+        day: photo.day,
+        photoId: photo.id,
+        featured,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "精选状态更新失败");
+    setPhotos((current) =>
+      current.map((item) =>
+        item.id === photo.id
+          ? {
+              ...item,
+              featured: data.featured,
+              featuredOrder: data.featuredOrder,
+            }
+          : item,
+      ),
+    );
+    return data;
+  };
+
+  const toggleActiveFeatured = async () => {
+    if (!activePhoto || bulkAction) return;
+    if (!activePhoto.featured && featuredPhotos.length >= MAX_FEATURED_PHOTOS) {
+      setBulkMessage(`每段旅程最多精选 ${MAX_FEATURED_PHOTOS} 张照片。`);
+      return;
+    }
+    setBulkAction("feature");
+    try {
+      await updateFeaturedPhoto(activePhoto, !activePhoto.featured);
+      if (collection === "featured" && activePhoto.featured) setActiveIndex(null);
+    } catch (error) {
+      setBulkMessage(error.message);
+    } finally {
+      setBulkAction("");
+    }
+  };
+
+  const toggleSelectedFeatured = async () => {
+    const shouldFeature = !selectedPhotos.every((photo) => photo.featured);
+    const additions = selectedPhotos.filter((photo) => !photo.featured).length;
+    if (shouldFeature && featuredPhotos.length + additions > MAX_FEATURED_PHOTOS) {
+      setBulkMessage(`每段旅程最多精选 ${MAX_FEATURED_PHOTOS} 张照片。`);
+      return;
+    }
+
+    setBulkAction("feature");
+    setBulkMessage("");
+    let updated = 0;
+    let failed = 0;
+    for (const photo of selectedPhotos) {
+      if (photo.featured === shouldFeature) continue;
+      try {
+        await updateFeaturedPhoto(photo, shouldFeature);
+        updated += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    setSelectedIds(new Set());
+    setBulkMessage(
+      failed
+        ? `${updated} 张已更新，${failed} 张失败。`
+        : `${updated} 张已${shouldFeature ? "加入" : "移出"}精选。`,
+    );
+    setBulkAction("");
   };
 
   const downloadSelected = async () => {
@@ -394,19 +547,30 @@ export default function PhotoGalleryPage() {
 
         {!!photos.length && (
           <section className="photo-filters" aria-label="照片筛选">
-            <div>
-              <span>日期</span>
-              <button className={dayFilter === "all" ? "active" : ""} onClick={() => setDayFilter("all")} type="button">全部</button>
-              {trip.days.map((day) => (
-                <button
-                  className={dayFilter === String(day.day) ? "active" : ""}
-                  key={day.day}
-                  onClick={() => setDayFilter(String(day.day))}
-                  type="button"
-                >
-                  Day {day.day}
+            <div className="photo-filter-stack">
+              <div>
+                <span>集合</span>
+                <button className={collection === "featured" ? "active" : ""} onClick={() => setCollection("featured")} type="button">
+                  精选 {featuredPhotos.length}
                 </button>
-              ))}
+                <button className={collection === "all" ? "active" : ""} onClick={() => setCollection("all")} type="button">
+                  全部 {photos.length}
+                </button>
+              </div>
+              <div>
+                <span>日期</span>
+                <button className={dayFilter === "all" ? "active" : ""} onClick={() => setDayFilter("all")} type="button">全部</button>
+                {trip.days.map((day) => (
+                  <button
+                    className={dayFilter === String(day.day) ? "active" : ""}
+                    key={day.day}
+                    onClick={() => setDayFilter(String(day.day))}
+                    type="button"
+                  >
+                    Day {day.day}
+                  </button>
+                ))}
+              </div>
             </div>
             {!!places.length && (
               <label>
@@ -426,6 +590,10 @@ export default function PhotoGalleryPage() {
             <div>
               <button type="button" onClick={toggleSelectAll}>
                 {allFilteredSelected ? "取消全选" : "全选当前结果"}
+              </button>
+              <button type="button" disabled={!!bulkAction} onClick={toggleSelectedFeatured}>
+                {bulkAction === "feature" ? <LoaderCircle className="spin" size={15} /> : <Star size={15} />}
+                {selectedPhotos.every((photo) => photo.featured) ? "取消精选" : "设为精选"}
               </button>
               <button type="button" disabled={!!bulkAction} onClick={downloadSelected}>
                 {bulkAction === "download" ? <LoaderCircle className="spin" size={15} /> : <Download size={15} />}
@@ -452,16 +620,26 @@ export default function PhotoGalleryPage() {
           </div>
         )}
         {!state.loading && !state.error && !!photos.length && !filteredPhotos.length && (
-          <div className="photo-state">当前筛选下没有照片。</div>
+          <div className="photo-empty compact">
+            <Star size={30} strokeWidth={1.5} />
+            <h2>{collection === "featured" ? "还没有精选照片" : "当前筛选下没有照片"}</h2>
+            <p>{collection === "featured" ? "切换到全部照片，通过右键或长按选择照片加入精选。" : "调整日期或地点筛选后重试。"}</p>
+            {collection === "featured" && (
+              <button className="text-link" type="button" onClick={() => setCollection("all")}>查看全部照片</button>
+            )}
+          </div>
         )}
 
         {!!filteredPhotos.length && (
-          <section className="photo-grid" aria-label={`${trip.shortTitle}照片`}>
+          <section
+            className={`photo-grid ${collection === "featured" ? "featured-photo-grid" : "all-photo-grid"}`}
+            aria-label={`${trip.shortTitle}照片`}
+          >
             {filteredPhotos.map((photo, index) => (
               <button
                 key={photo.id}
                 type="button"
-                className={selectedIds.has(photo.id) ? "selected" : ""}
+                className={`${selectedIds.has(photo.id) ? "selected" : ""} photo-layout-${index % 8}`}
                 aria-pressed={selectedIds.has(photo.id)}
                 onClick={() => openOrSelectPhoto(photo, index)}
                 onContextMenu={(event) => {
@@ -496,6 +674,27 @@ export default function PhotoGalleryPage() {
           <button className="lightbox-close" type="button" onClick={() => setActiveIndex(null)} aria-label="关闭">
             <X size={22} />
           </button>
+          <div className="lightbox-zoom-controls" aria-label="图片缩放">
+            <button type="button" onClick={() => changeZoom(-ZOOM_STEP)} disabled={imageView.zoom === MIN_ZOOM} aria-label="缩小">
+              <ZoomOut size={17} />
+            </button>
+            <span>{Math.round(imageView.zoom * 100)}%</span>
+            <button type="button" onClick={() => changeZoom(ZOOM_STEP)} disabled={imageView.zoom === MAX_ZOOM} aria-label="放大">
+              <ZoomIn size={17} />
+            </button>
+            <button type="button" onClick={resetImageView} disabled={imageView.zoom === MIN_ZOOM} aria-label="恢复原始缩放">
+              <RotateCcw size={16} />
+            </button>
+          </div>
+          <button
+            className={`lightbox-featured ${activePhoto.featured ? "active" : ""}`}
+            type="button"
+            disabled={bulkAction === "feature"}
+            onClick={toggleActiveFeatured}
+            aria-label={activePhoto.featured ? "取消精选" : "设为精选"}
+          >
+            {bulkAction === "feature" ? <LoaderCircle className="spin" size={18} /> : <Star size={19} fill={activePhoto.featured ? "currentColor" : "none"} />}
+          </button>
           {filteredPhotos.length > 1 && (
             <>
               <button className="lightbox-previous" type="button" onClick={() => stepPhoto(-1)} aria-label="上一张">
@@ -508,16 +707,34 @@ export default function PhotoGalleryPage() {
           )}
           <figure>
             <div
-              className="lightbox-image-stage"
+              className={`lightbox-image-stage ${imageView.zoom > 1 ? "zoomed" : ""} ${imageDrag.current ? "dragging" : ""}`}
+              onDoubleClick={() => {
+                if (imageView.zoom === 1) changeZoom(1);
+                else resetImageView();
+              }}
+              onPointerCancel={stopImageDrag}
+              onPointerDown={startImageDrag}
+              onPointerMove={moveImage}
+              onPointerUp={stopImageDrag}
+              onWheel={(event) => {
+                event.preventDefault();
+                changeZoom(event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP);
+              }}
               style={{ aspectRatio: activePhoto.width && activePhoto.height ? `${activePhoto.width} / ${activePhoto.height}` : "4 / 3" }}
             >
-              <img className="lightbox-placeholder" src={activePhoto.thumbnailUrl} alt="" aria-hidden="true" />
-              <img
-                className={`lightbox-original ${loadedOriginals.has(activePhoto.displayUrl) ? "loaded" : ""}`}
-                src={activePhoto.displayUrl}
-                alt={activePhoto.caption || activePhoto.place || `Day ${activePhoto.day}`}
-                onLoad={() => markOriginalLoaded(activePhoto.displayUrl)}
-              />
+              <div
+                className="lightbox-image-content"
+                style={{ transform: `translate(${imageView.x}px, ${imageView.y}px) scale(${imageView.zoom})` }}
+              >
+                <img className="lightbox-placeholder" src={activePhoto.thumbnailUrl} alt="" aria-hidden="true" draggable="false" />
+                <img
+                  className={`lightbox-original ${loadedOriginals.has(activePhoto.displayUrl) ? "loaded" : ""}`}
+                  src={activePhoto.displayUrl}
+                  alt={activePhoto.caption || activePhoto.place || `Day ${activePhoto.day}`}
+                  draggable="false"
+                  onLoad={() => markOriginalLoaded(activePhoto.displayUrl)}
+                />
+              </div>
               {!loadedOriginals.has(activePhoto.displayUrl) && (
                 <LoaderCircle className="lightbox-loader spin" size={24} />
               )}

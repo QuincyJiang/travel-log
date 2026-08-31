@@ -10,6 +10,15 @@ const normalizeExifDate = (value) => {
   return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 };
 
+const localDateKey = (value) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const normalizeExif = (rawExif) => {
   if (!rawExif) return null;
   const exif = {
@@ -89,10 +98,18 @@ const loadImage = async (file) => {
   }
 };
 
+const calculateChecksum = async (file) => {
+  const hash = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return [...new Uint8Array(hash)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+};
+
 export async function readPhotoDimensions(file) {
-  const [image, rawExif] = await Promise.all([
+  const [image, rawExif, checksum] = await Promise.all([
     loadImage(file),
     readExifMetadata(file),
+    calculateChecksum(file),
   ]);
   const scale = Math.min(1, 640 / Math.max(image.naturalWidth, image.naturalHeight));
   const width = Math.max(1, Math.round(image.naturalWidth * scale));
@@ -115,11 +132,16 @@ export async function readPhotoDimensions(file) {
     );
   });
   const exifTakenAt = rawExif?.takenAt ?? "";
+  const fallbackTakenAt = new Date(file.lastModified).toISOString();
 
   return {
+    capturedDate: localDateKey(exifTakenAt || fallbackTakenAt),
+    checksum,
+    dateSource: exifTakenAt ? "exif" : "file",
     exif: rawExif,
+    size: file.size,
     thumbnail,
-    takenAt: exifTakenAt || new Date(file.lastModified).toISOString(),
+    takenAt: exifTakenAt || fallbackTakenAt,
     width: image.naturalWidth,
     height: image.naturalHeight,
   };

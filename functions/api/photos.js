@@ -1,10 +1,16 @@
 import {
+  checksumKey,
+  featurePhoto,
   imageLimits,
   json,
   listTripPhotos,
+  MAX_FEATURED_PHOTOS,
+  photoFromObject,
   photoPrefix,
   requirePhotoBucket,
   toCustomMetadata,
+  unfeaturePhoto,
+  unfeaturePhotos,
   validDay,
   validPhotoId,
   validTripId,
@@ -49,6 +55,92 @@ const extensionForType = (type) => ({
   "image/webp": "webp",
 }[type]);
 
+const CHECKSUM_LEASE_MS = 15 * 60 * 1000;
+
+const parseReservation = async (object) => {
+  try {
+    return JSON.parse(await object.text());
+  } catch {
+    return null;
+  }
+};
+
+const releaseChecksum = async (bucket, tripId, checksum, photoId) => {
+  const key = checksumKey(tripId, checksum);
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const existing = await bucket.get(key);
+    if (!existing) return;
+    const current = await parseReservation(existing);
+    if (current?.photoId !== photoId || current.releasedAt) return;
+    const released = await bucket.put(
+      key,
+      JSON.stringify({
+        ...current,
+        releasedAt: new Date().toISOString(),
+      }),
+      {
+        onlyIf: { etagMatches: existing.etag },
+        httpMetadata: { contentType: "application/json" },
+      },
+    );
+    if (released) return;
+  }
+  throw new Error("Checksum lease is busy");
+};
+
+const reserveChecksum = async (bucket, tripId, checksum, reservation) => {
+  const key = checksumKey(tripId, checksum);
+  const value = JSON.stringify(reservation);
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const created = await bucket.put(key, value, {
+      onlyIf: { etagDoesNotMatch: "*" },
+      httpMetadata: { contentType: "application/json" },
+    });
+    if (created) return key;
+
+    const existing = await bucket.get(key);
+    if (!existing) continue;
+    const current = await parseReservation(existing);
+
+    if (validDay(current?.day) && validPhotoId(current?.photoId)) {
+      const result = await bucket.list({
+        prefix: `${photoPrefix(tripId, Number(current.day), current.photoId)}/`,
+        limit: 3,
+      });
+      if (result.objects.some((object) => /\/original\.(?:jpg|png|webp)$/.test(object.key))) {
+        return null;
+      }
+    }
+
+    const reservedAt = Date.parse(current?.reservedAt);
+    if (
+      !current?.releasedAt &&
+      Number.isFinite(reservedAt) &&
+      Date.now() - reservedAt < CHECKSUM_LEASE_MS
+    ) {
+      return null;
+    }
+
+    const reclaimed = await bucket.put(key, value, {
+      onlyIf: { etagMatches: existing.etag },
+      httpMetadata: { contentType: "application/json" },
+    });
+    if (reclaimed) {
+      if (validDay(current?.day) && validPhotoId(current?.photoId)) {
+        const staleObjects = await bucket.list({
+          prefix: `${photoPrefix(tripId, Number(current.day), current.photoId)}/`,
+        });
+        if (staleObjects.objects.length) {
+          await bucket.delete(staleObjects.objects.map((object) => object.key));
+        }
+      }
+      return key;
+    }
+  }
+  return null;
+};
+
 export async function onRequestGet({ request, env }) {
   try {
     const url = new URL(request.url);
@@ -68,6 +160,10 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   let bucket;
   let writtenKeys = [];
+  let markerKey;
+  let reservationPhotoId;
+  let reservationTripId;
+  let reservedChecksum;
 
   try {
     bucket = requirePhotoBucket(env);
@@ -76,9 +172,13 @@ export async function onRequestPost({ request, env }) {
     const day = Number(formData.get("day"));
     const original = formData.get("original");
     const thumbnail = formData.get("thumbnail");
+    const submittedChecksum = cleanText(formData.get("checksum"), 64);
 
     if (!validTripId(tripId) || !validDay(day)) {
       return json({ error: "旅程或 Day 无效" }, { status: 400 });
+    }
+    if (!/^[a-f0-9]{64}$/.test(submittedChecksum)) {
+      return json({ error: "照片校验值无效" }, { status: 400 });
     }
 
     const fileError =
@@ -86,10 +186,48 @@ export async function onRequestPost({ request, env }) {
       validateImageFile(thumbnail, "缩略图", imageLimits.thumbnail);
     if (fileError) return json({ error: fileError }, { status: 400 });
 
+    const originalBuffer = await original.arrayBuffer();
+    const checksumBuffer = await crypto.subtle.digest("SHA-256", originalBuffer);
+    const checksum = [...new Uint8Array(checksumBuffer)]
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+    if (checksum !== submittedChecksum) {
+      return json({ error: "原图校验失败" }, { status: 400 });
+    }
+
+    const takenAt = cleanText(formData.get("takenAt"), 40);
+    const width = Number(formData.get("width")) || null;
+    const height = Number(formData.get("height")) || null;
+    const duplicate = (await listTripPhotos(bucket, tripId)).find(
+      (photo) =>
+        photo.checksum === checksum ||
+        (
+          !photo.checksum &&
+          photo.size === original.size &&
+          photo.width === width &&
+          photo.height === height &&
+          photo.takenAt === takenAt
+        ),
+    );
+    if (duplicate) {
+      return json({ error: "照片已存在", duplicate }, { status: 409 });
+    }
+
     const id = crypto.randomUUID();
+    reservationPhotoId = id;
+    reservationTripId = tripId;
+    reservedChecksum = checksum;
     const prefix = photoPrefix(tripId, day, id);
     const originalKey = `${prefix}/original.${extensionForType(original.type)}`;
     const thumbnailKey = `${prefix}/thumbnail.webp`;
+    markerKey = await reserveChecksum(bucket, tripId, checksum, {
+      day,
+      photoId: id,
+      reservedAt: new Date().toISOString(),
+    });
+    if (!markerKey) {
+      return json({ error: "照片已存在或正在上传" }, { status: 409 });
+    }
     writtenKeys = [originalKey, thumbnailKey];
 
     const metadata = {
@@ -98,13 +236,18 @@ export async function onRequestPost({ request, env }) {
       day,
       place: cleanText(formData.get("place"), 60),
       caption: cleanText(formData.get("caption"), 160),
+      capturedDate: cleanText(formData.get("capturedDate"), 10),
+      checksum,
+      dateSource: ["exif", "file"].includes(formData.get("dateSource"))
+        ? formData.get("dateSource")
+        : "",
       exif: cleanExif(formData.get("exif")),
-      takenAt: cleanText(formData.get("takenAt"), 40),
+      takenAt,
       uploadedAt: new Date().toISOString(),
       originalName: cleanText(original.name, 100),
       size: original.size,
-      width: Number(formData.get("width")) || null,
-      height: Number(formData.get("height")) || null,
+      width,
+      height,
     };
     const customMetadata = toCustomMetadata(metadata);
 
@@ -114,12 +257,13 @@ export async function onRequestPost({ request, env }) {
         cacheControl: "no-store",
       },
     });
-    await bucket.put(originalKey, original.stream(), {
+    await bucket.put(originalKey, originalBuffer, {
         httpMetadata: {
           contentType: original.type,
           cacheControl: "no-store",
         },
         customMetadata,
+        sha256: checksumBuffer,
     });
 
     return json(
@@ -133,11 +277,25 @@ export async function onRequestPost({ request, env }) {
       { status: 201 },
     );
   } catch (error) {
+    let cleanupSucceeded = true;
     if (bucket && writtenKeys.length) {
       try {
         await bucket.delete(writtenKeys);
       } catch (cleanupError) {
+        cleanupSucceeded = false;
         console.error("Failed to clean up photo upload", cleanupError);
+      }
+    }
+    if (cleanupSucceeded && bucket && markerKey && reservationPhotoId) {
+      try {
+        await releaseChecksum(
+          bucket,
+          reservationTripId,
+          reservedChecksum,
+          reservationPhotoId,
+        );
+      } catch (cleanupError) {
+        console.error("Failed to release checksum lease", cleanupError);
       }
     }
     console.error("Failed to upload photo", error);
@@ -163,15 +321,52 @@ export async function onRequestDelete({ request, env }) {
     const bucket = requirePhotoBucket(env);
     const results = await Promise.all(
       photos.map(({ tripId, day, photoId }) =>
-        bucket.list({ prefix: `${photoPrefix(tripId, Number(day), photoId)}/` }),
+        bucket.list({
+          prefix: `${photoPrefix(tripId, Number(day), photoId)}/`,
+          include: ["customMetadata"],
+        }),
       ),
     );
-    const keys = results.flatMap((result) => result.objects.map((object) => object.key));
+    const storedPhotos = results.map((result) => {
+      const original = result.objects.find((object) =>
+        /\/original\.(?:jpg|png|webp)$/.test(object.key),
+      );
+      return original ? photoFromObject(original) : null;
+    });
+    const keys = results.flatMap((result) =>
+      result.objects.map((object) => object.key),
+    );
     if (!keys.length) {
       return json({ error: "照片不存在" }, { status: 404 });
     }
 
     await bucket.delete(keys);
+    const checksumCleanup = await Promise.allSettled(
+      storedPhotos.map((photo) =>
+        photo?.checksum
+          ? releaseChecksum(bucket, photo.tripId, photo.checksum, photo.id)
+          : Promise.resolve(),
+      ),
+    );
+    checksumCleanup
+      .filter((result) => result.status === "rejected")
+      .forEach((result) => console.error("Failed to release checksum lease", result.reason));
+    const deletedPhotosByTrip = new Map();
+    results.forEach((result, index) => {
+      if (!result.objects.length) return;
+      const photo = photos[index];
+      const photoIds = deletedPhotosByTrip.get(photo.tripId) ?? [];
+      photoIds.push(photo.photoId);
+      deletedPhotosByTrip.set(photo.tripId, photoIds);
+    });
+    const featuredCleanup = await Promise.allSettled(
+      [...deletedPhotosByTrip].map(([tripId, photoIds]) =>
+        unfeaturePhotos(bucket, tripId, photoIds),
+      ),
+    );
+    featuredCleanup
+      .filter((result) => result.status === "rejected")
+      .forEach((result) => console.error("Failed to clean featured index", result.reason));
     return json({
       deleted: results.filter((result) => result.objects.length).length,
       missing: results.filter((result) => !result.objects.length).length,
@@ -179,5 +374,51 @@ export async function onRequestDelete({ request, env }) {
   } catch (error) {
     console.error("Failed to delete photo", error);
     return json({ error: "照片删除失败" }, { status: 500 });
+  }
+}
+
+export async function onRequestPatch({ request, env }) {
+  try {
+    const { tripId, day, photoId, featured } = await request.json();
+    if (
+      !validTripId(tripId) ||
+      !validDay(day) ||
+      !validPhotoId(photoId) ||
+      typeof featured !== "boolean"
+    ) {
+      return json({ error: "精选参数无效" }, { status: 400 });
+    }
+
+    const bucket = requirePhotoBucket(env);
+    const photo = (await listTripPhotos(bucket, tripId)).find(
+      (item) => item.id === photoId && item.day === Number(day),
+    );
+    if (!photo) {
+      return json({ error: "照片不存在" }, { status: 404 });
+    }
+
+    if (!featured) {
+      await unfeaturePhoto(bucket, tripId, photoId);
+      return json({ featured: false, featuredOrder: null });
+    }
+
+    const slot = await featurePhoto(bucket, tripId, photoId);
+    if (!slot) {
+      return json(
+        { error: `每段旅程最多精选 ${MAX_FEATURED_PHOTOS} 张照片` },
+        { status: 409 },
+      );
+    }
+    const stillExists = (await listTripPhotos(bucket, tripId)).some(
+      (item) => item.id === photoId && item.day === Number(day),
+    );
+    if (!stillExists) {
+      await unfeaturePhoto(bucket, tripId, photoId);
+      return json({ error: "照片不存在" }, { status: 404 });
+    }
+    return json({ featured: true, featuredOrder: slot });
+  } catch (error) {
+    console.error("Failed to update featured photo", error);
+    return json({ error: "精选状态更新失败" }, { status: 500 });
   }
 }

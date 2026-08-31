@@ -1,4 +1,7 @@
 const PHOTO_PREFIX = "photos";
+const FEATURED_PREFIX = "featured";
+export const MAX_FEATURED_PHOTOS = 16;
+const MAX_FEATURED_UPDATE_ATTEMPTS = 64;
 const MAX_ORIGINAL_SIZE = 50 * 1024 * 1024;
 const MAX_THUMBNAIL_SIZE = 2 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -30,6 +33,103 @@ export const validDay = (value) => {
 export function photoPrefix(tripId, day, photoId = "") {
   const daySegment = `day-${String(day).padStart(2, "0")}`;
   return `${PHOTO_PREFIX}/${tripId}/${daySegment}/${photoId}`;
+}
+
+export const checksumKey = (tripId, checksum) =>
+  `photo-checksums/${tripId}/${checksum}`;
+
+const featuredIndexKey = (tripId) =>
+  `${FEATURED_PREFIX}/${tripId}/index.json`;
+
+const parseFeaturedIds = (value) => {
+  try {
+    const ids = JSON.parse(value);
+    return Array.isArray(ids)
+      ? [...new Set(ids.filter(validPhotoId))].slice(0, MAX_FEATURED_PHOTOS)
+      : [];
+  } catch {
+    return [];
+  }
+};
+
+const readFeaturedIndex = async (bucket, tripId) => {
+  const object = await bucket.get(featuredIndexKey(tripId));
+  return {
+    etag: object?.etag ?? null,
+    ids: object ? parseFeaturedIds(await object.text()) : [],
+  };
+};
+
+const writeFeaturedIndex = async (bucket, tripId, ids, etag) =>
+  bucket.put(featuredIndexKey(tripId), JSON.stringify(ids), {
+    onlyIf: etag
+      ? { etagMatches: etag }
+      : { etagDoesNotMatch: "*" },
+    httpMetadata: { contentType: "application/json" },
+  });
+
+const listStoredPhotoIds = async (bucket, tripId) => {
+  const ids = new Set();
+  let cursor;
+  do {
+    const result = await bucket.list({
+      prefix: `${PHOTO_PREFIX}/${tripId}/`,
+      cursor,
+      limit: 1000,
+    });
+    result.objects.forEach((object) => {
+      const photoId = object.key.match(
+        /\/([a-f0-9-]{36})\/original\.(?:jpg|png|webp)$/,
+      )?.[1];
+      if (photoId) ids.add(photoId);
+    });
+    cursor = result.truncated ? result.cursor : undefined;
+  } while (cursor);
+  return ids;
+};
+
+export async function listFeaturedSlots(bucket, tripId) {
+  const { ids } = await readFeaturedIndex(bucket, tripId);
+  return ids.map((photoId, index) => ({
+    key: featuredIndexKey(tripId),
+    photoId,
+    slot: index + 1,
+  }));
+}
+
+export async function featurePhoto(bucket, tripId, photoId) {
+  for (let attempt = 0; attempt < MAX_FEATURED_UPDATE_ATTEMPTS; attempt += 1) {
+    const { ids, etag } = await readFeaturedIndex(bucket, tripId);
+    const existingIndex = ids.indexOf(photoId);
+    if (existingIndex >= 0) return existingIndex + 1;
+    if (ids.length >= MAX_FEATURED_PHOTOS) {
+      const storedPhotoIds = await listStoredPhotoIds(bucket, tripId);
+      const validIds = ids.filter((id) => storedPhotoIds.has(id));
+      if (validIds.length === ids.length) return null;
+      if (await writeFeaturedIndex(bucket, tripId, validIds, etag)) continue;
+      continue;
+    }
+    const nextIds = [...ids, photoId];
+    if (await writeFeaturedIndex(bucket, tripId, nextIds, etag)) {
+      return nextIds.length;
+    }
+  }
+  throw new Error("Featured index is busy");
+}
+
+export async function unfeaturePhoto(bucket, tripId, photoId) {
+  return unfeaturePhotos(bucket, tripId, [photoId]);
+}
+
+export async function unfeaturePhotos(bucket, tripId, photoIds) {
+  const idsToRemove = new Set(photoIds);
+  for (let attempt = 0; attempt < MAX_FEATURED_UPDATE_ATTEMPTS; attempt += 1) {
+    const { ids, etag } = await readFeaturedIndex(bucket, tripId);
+    if (!ids.some((id) => idsToRemove.has(id))) return;
+    const nextIds = ids.filter((id) => !idsToRemove.has(id));
+    if (await writeFeaturedIndex(bucket, tripId, nextIds, etag)) return;
+  }
+  throw new Error("Featured index is busy");
 }
 
 export function validateImageFile(file, label, maxSize) {
@@ -84,6 +184,9 @@ export function photoFromObject(object) {
     day: metadata.day,
     place: metadata.place,
     caption: metadata.caption,
+    capturedDate: metadata.capturedDate ?? "",
+    checksum: metadata.checksum ?? "",
+    dateSource: metadata.dateSource ?? "",
     exif: metadata.exif ?? null,
     takenAt: metadata.takenAt,
     uploadedAt: metadata.uploadedAt,
@@ -116,7 +219,17 @@ export async function listTripPhotos(bucket, tripId) {
     cursor = result.truncated ? result.cursor : undefined;
   } while (cursor);
 
-  return photos.sort((left, right) => {
+  const featuredIds = (await listFeaturedSlots(bucket, tripId))
+    .map(({ photoId }) => photoId);
+  const featuredOrder = new Map(
+    featuredIds.map((photoId, index) => [photoId, index + 1]),
+  );
+
+  return photos.map((photo) => ({
+    ...photo,
+    featured: featuredOrder.has(photo.id),
+    featuredOrder: featuredOrder.get(photo.id) ?? null,
+  })).sort((left, right) => {
     const leftDate = left.takenAt || left.uploadedAt;
     const rightDate = right.takenAt || right.uploadedAt;
     return leftDate.localeCompare(rightDate) || left.id.localeCompare(right.id);
