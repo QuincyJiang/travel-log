@@ -1,6 +1,12 @@
 name = "travel-log"
+main = "worker/index.js"
 compatibility_date = "2025-07-18"
-pages_build_output_dir = "./dist"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
 
 [[r2_buckets]]
 binding = "TRAVEL_PHOTOS"

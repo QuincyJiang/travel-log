@@ -35,7 +35,7 @@ photos/:tripId/day-01/:photoId/
 
 照片元数据保存在原图的 R2 Custom Metadata 中，因此不依赖额外数据库。
 
-## Cloudflare Pages 配置
+## Cloudflare Worker 配置
 
 项目已在 `wrangler.toml` 中声明 R2 binding：
 
@@ -45,24 +45,21 @@ binding = "TRAVEL_PHOTOS"
 bucket_name = "travel-log"
 ```
 
-Cloudflare Pages 项目需要完成以下配置：
+当前项目由 Worker 同时托管 Vite 静态资源与 `/api/*` 相册接口。Cloudflare Builds 需要完成以下配置：
 
-1. 打开 **Workers & Pages → 当前 Pages 项目 → Settings → Bindings**。
-2. 新增 **R2 bucket binding**：
-   - Variable name：`TRAVEL_PHOTOS`
-   - R2 bucket：`travel-log`
-   - Production 与 Preview 环境都配置；如果不希望预览环境写入正式照片，可另建预览桶。
-3. 打开 **Settings → Variables and Secrets**，新增加密 Secret：
+1. 打开 **Workers & Pages → travel-log → Settings → Builds**。
+2. 设置：
+   - Build command：`npm run build`
+   - Deploy command：`npx wrangler deploy`
+   - Node version：22
+3. API token 使用 Builds 自动创建的 User Token。它需要 `Workers Scripts: Edit` 与 `Workers R2 Storage: Edit`；不需要 `Cloudflare Pages: Edit`。
+4. 部署成功后，`wrangler.toml` 会自动建立 `TRAVEL_PHOTOS` → `travel-log` R2 binding。
+5. 打开 **Settings → Variables & Secrets**，新增加密 Secret：
    - Name：`ADMIN_TOKEN`
    - Value：长度至少 32 位的随机字符串
-   - Production 与 Preview 分别配置。
-4. 在构建环境变量中设置 `NODE_VERSION=22`，用于本地同款的最新版 Wrangler 工具链。
-5. Pages 构建设置保持：
-   - Build command：`npm run build`
-   - Build output directory：`dist`
-6. 重新部署一次，使 Functions、R2 binding 和 Secret 生效。
+6. 保存 Secret 后重新部署。
 
-上传管理页会把管理密钥保存在当前标签页的 `sessionStorage`，不会写入仓库或永久保存在浏览器。所有上传和删除请求都必须携带该密钥。R2 存储桶保持私有，但相册中的原图会通过只读 Functions 接口公开展示；原图不压缩且 EXIF/GPS 不会被移除。
+上传管理页会把管理密钥保存在当前标签页的 `sessionStorage`，不会写入仓库或永久保存在浏览器。所有上传和删除请求都必须携带该密钥。R2 存储桶保持私有，但相册中的原图会通过 Worker 只读接口公开展示；原图不压缩且 EXIF/GPS 不会被移除。
 
 建议额外使用 **Cloudflare Zero Trust → Access → Applications**，为 `/manage/photos*` 配置只允许个人邮箱访问的 Self-hosted 应用。R2 存储桶本身保持私有，不需要开启 `r2.dev` 或自定义公开域名。
 
@@ -80,8 +77,8 @@ npm run dev:cloudflare
 通过 Wrangler CLI 部署时，也可以设置 Secret：
 
 ```bash
-npx wrangler@latest pages secret put ADMIN_TOKEN --project-name <你的 Pages 项目名>
-npm run deploy -- --project-name <你的 Pages 项目名>
+npx wrangler@latest secret put ADMIN_TOKEN
+npm run deploy
 ```
 
 ## 新增旅程
