@@ -1,5 +1,8 @@
 import exifr from "exifr/dist/full.esm.mjs";
 
+const THUMBNAIL_MAX_EDGE = 1600;
+const THUMBNAIL_QUALITY = 0.84;
+
 const normalizeExifDate = (value) => {
   if (value instanceof Date) return value.toISOString();
   if (typeof value !== "string") return "";
@@ -111,7 +114,10 @@ export async function readPhotoDimensions(file) {
     readExifMetadata(file),
     calculateChecksum(file),
   ]);
-  const scale = Math.min(1, 640 / Math.max(image.naturalWidth, image.naturalHeight));
+  const scale = Math.min(
+    1,
+    THUMBNAIL_MAX_EDGE / Math.max(image.naturalWidth, image.naturalHeight),
+  );
   const width = Math.max(1, Math.round(image.naturalWidth * scale));
   const height = Math.max(1, Math.round(image.naturalHeight * scale));
   const canvas = document.createElement("canvas");
@@ -119,6 +125,8 @@ export async function readPhotoDimensions(file) {
   canvas.height = height;
   const context = canvas.getContext("2d");
   if (!context) throw new Error("浏览器无法生成预览图");
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
   context.drawImage(image, 0, 0, width, height);
 
   const thumbnail = await new Promise((resolve, reject) => {
@@ -128,7 +136,7 @@ export async function readPhotoDimensions(file) {
         else reject(new Error("预览图生成失败"));
       },
       "image/webp",
-      0.78,
+      THUMBNAIL_QUALITY,
     );
   });
   const exifTakenAt = rawExif?.takenAt ?? "";
