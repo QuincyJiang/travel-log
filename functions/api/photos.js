@@ -14,6 +14,35 @@ import {
 const cleanText = (value, maxLength) =>
   typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 
+const cleanNumber = (value, minimum, maximum) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number >= minimum && number <= maximum
+    ? number
+    : null;
+};
+
+const cleanExif = (value) => {
+  try {
+    const exif = JSON.parse(value);
+    if (!exif || typeof exif !== "object") return null;
+    const cleaned = {
+      aperture: cleanNumber(exif.aperture, 0.1, 128),
+      cameraMake: cleanText(exif.cameraMake, 60),
+      cameraModel: cleanText(exif.cameraModel, 80),
+      exposureTime: cleanNumber(exif.exposureTime, 0.000001, 3600),
+      focalLength: cleanNumber(exif.focalLength, 0.1, 5000),
+      iso: cleanNumber(exif.iso, 1, 10000000),
+      lensModel: cleanText(exif.lensModel, 100),
+      takenAt: cleanText(exif.takenAt, 40),
+    };
+    return Object.values(cleaned).some((item) => item !== null && item !== "")
+      ? cleaned
+      : null;
+  } catch {
+    return null;
+  }
+};
+
 const extensionForType = (type) => ({
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -69,9 +98,11 @@ export async function onRequestPost({ request, env }) {
       day,
       place: cleanText(formData.get("place"), 60),
       caption: cleanText(formData.get("caption"), 160),
+      exif: cleanExif(formData.get("exif")),
       takenAt: cleanText(formData.get("takenAt"), 40),
       uploadedAt: new Date().toISOString(),
       originalName: cleanText(original.name, 100),
+      size: original.size,
       width: Number(formData.get("width")) || null,
       height: Number(formData.get("height")) || null,
     };
@@ -116,20 +147,35 @@ export async function onRequestPost({ request, env }) {
 
 export async function onRequestDelete({ request, env }) {
   try {
-    const { tripId, day, photoId } = await request.json();
-    if (!validTripId(tripId) || !validDay(day) || !validPhotoId(photoId)) {
+    const payload = await request.json();
+    const photos = Array.isArray(payload.photos) ? payload.photos : [payload];
+    if (
+      !photos.length ||
+      photos.length > 100 ||
+      photos.some(
+        ({ tripId, day, photoId }) =>
+          !validTripId(tripId) || !validDay(day) || !validPhotoId(photoId),
+      )
+    ) {
       return json({ error: "照片标识无效" }, { status: 400 });
     }
 
     const bucket = requirePhotoBucket(env);
-    const prefix = `${photoPrefix(tripId, Number(day), photoId)}/`;
-    const result = await bucket.list({ prefix });
-    if (!result.objects.length) {
+    const results = await Promise.all(
+      photos.map(({ tripId, day, photoId }) =>
+        bucket.list({ prefix: `${photoPrefix(tripId, Number(day), photoId)}/` }),
+      ),
+    );
+    const keys = results.flatMap((result) => result.objects.map((object) => object.key));
+    if (!keys.length) {
       return json({ error: "照片不存在" }, { status: 404 });
     }
 
-    await bucket.delete(result.objects.map((object) => object.key));
-    return json({ deleted: true });
+    await bucket.delete(keys);
+    return json({
+      deleted: results.filter((result) => result.objects.length).length,
+      missing: results.filter((result) => !result.objects.length).length,
+    });
   } catch (error) {
     console.error("Failed to delete photo", error);
     return json({ error: "照片删除失败" }, { status: 500 });

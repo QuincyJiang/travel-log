@@ -19,7 +19,7 @@ export async function onRequestGet({ request, env }) {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
-  headers.set("cache-control", "no-store");
+  headers.set("cache-control", "private, max-age=3600");
   headers.set("x-content-type-options", "nosniff");
   return new Response(object.body, { headers });
 }

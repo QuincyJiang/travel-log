@@ -84,10 +84,12 @@ export function photoFromObject(object) {
     day: metadata.day,
     place: metadata.place,
     caption: metadata.caption,
+    exif: metadata.exif ?? null,
     takenAt: metadata.takenAt,
     uploadedAt: metadata.uploadedAt,
     width: metadata.width,
     height: metadata.height,
+    size: metadata.size ?? object.size,
     displayUrl: photoUrl,
     thumbnailUrl: `/api/photo-file?key=${encodeURIComponent(thumbnailKey)}`,
   };

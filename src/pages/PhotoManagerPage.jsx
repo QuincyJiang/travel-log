@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ImagePlus, LoaderCircle, Trash2, Upload } from "lucide-react";
+import { ArrowRight, Check, ImagePlus, LoaderCircle, Trash2, Upload } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import { trips } from "../data/trips";
@@ -32,6 +32,10 @@ export default function PhotoManagerPage() {
   const [deletingId, setDeletingId] = useState("");
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const pendingCount = items.filter((item) => item.status !== "done").length;
+  const allUploaded = items.length > 0 && pendingCount === 0;
+  const currentDayIndex = trip.days.findIndex((item) => item.day === day);
+  const nextDay = trip.days[currentDayIndex + 1];
 
   const refreshPhotos = async (activeTripId = trip.id, signal) => {
     const response = await fetch(`/api/photos?tripId=${encodeURIComponent(activeTripId)}`, {
@@ -105,6 +109,19 @@ export default function PhotoManagerPage() {
     });
   };
 
+  const continueUploading = () => {
+    items.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    setItems([]);
+    setPlace("");
+    if (nextDay) {
+      setDay(nextDay.day);
+      setMessage(`已切换到 Day ${nextDay.day}。`);
+    } else {
+      setMessage("可以继续选择当前旅程的照片。");
+    }
+    document.querySelector(".upload-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   const uploadItem = async (item) => {
     setItems((current) => updateItem(current, item.id, { status: "processing", error: "" }));
     const dimensions = await readPhotoDimensions(item.file);
@@ -113,7 +130,8 @@ export default function PhotoManagerPage() {
     formData.append("day", String(day));
     formData.append("place", place);
     formData.append("caption", item.caption);
-    formData.append("takenAt", new Date(item.file.lastModified).toISOString());
+    formData.append("takenAt", dimensions.takenAt);
+    formData.append("exif", JSON.stringify(dimensions.exif));
     formData.append("width", String(dimensions.width));
     formData.append("height", String(dimensions.height));
     formData.append("original", item.file, item.file.name);
@@ -169,7 +187,7 @@ export default function PhotoManagerPage() {
   };
 
   const deletePhoto = async (photo) => {
-    if (!window.confirm(`确认删除 Day ${photo.day} 的这张照片？原图也会一并删除。`)) return;
+    if (!window.confirm(`确认删除 Day ${photo.day} 的这张照片？此操作不可恢复。`)) return;
 
     setDeletingId(photo.id);
     setMessage("");
@@ -204,7 +222,7 @@ export default function PhotoManagerPage() {
           <div>
             <span className="eyebrow">PRIVATE PHOTO MANAGER</span>
             <h1>批量上传</h1>
-            <p>R2 保存未压缩原图；相册网格使用浏览器生成的小预览图，点开后加载原图。</p>
+            <p>按旅程、Day 和地点批量整理照片。</p>
           </div>
           <a className="text-link" href={`/photos/${trip.id}`}>查看相册 →</a>
         </section>
@@ -234,7 +252,7 @@ export default function PhotoManagerPage() {
           <label className="photo-picker">
             <ImagePlus size={30} strokeWidth={1.5} />
             <strong>选择照片</strong>
-            <span>支持多选 JPEG、PNG、WebP，原图不压缩，单张不超过 50 MB</span>
+            <span>支持多选 JPEG、PNG、WebP，单张不超过 50 MB</span>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -278,17 +296,24 @@ export default function PhotoManagerPage() {
 
           <div className="upload-submit">
             <p aria-live="polite">{message}</p>
-            <button type="submit" disabled={uploading || !items.length}>
-              {uploading ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}
-              {uploading ? "正在上传" : `上传 ${items.filter((item) => item.status !== "done").length} 张`}
-            </button>
+            {allUploaded ? (
+              <button type="button" onClick={continueUploading}>
+                {nextDay ? `下一天 · Day ${nextDay.day}` : "继续上传"}
+                <ArrowRight size={17} />
+              </button>
+            ) : (
+              <button type="submit" disabled={uploading || pendingCount === 0}>
+                {uploading ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}
+                {uploading ? "正在上传" : pendingCount ? `上传 ${pendingCount} 张` : "请先选择照片"}
+              </button>
+            )}
           </div>
         </form>
 
         <section className="managed-photos" aria-labelledby="managed-photos-title">
           <div className="section-heading compact">
             <div>
-              <span className="section-index">R2 LIBRARY</span>
+              <span className="section-index">PHOTO LIBRARY</span>
               <h2 id="managed-photos-title">已上传照片</h2>
             </div>
             <p>{existingPhotos.length} 张 · {trip.shortTitle}</p>
