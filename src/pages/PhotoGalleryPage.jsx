@@ -99,10 +99,10 @@ export default function PhotoGalleryPage() {
             <h1>影像相册</h1>
             <p>{trip.shortTitle} · 按日期与地点整理旅行现场。</p>
           </div>
-          <Link className="photo-manage-link" href={`/manage/photos?trip=${trip.id}`}>
+          <a className="photo-manage-link" href={`/manage/photos?trip=${trip.id}`}>
             <Upload size={15} strokeWidth={1.8} />
             上传照片
-          </Link>
+          </a>
         </section>
 
         {!!photos.length && (
@@ -140,7 +140,7 @@ export default function PhotoGalleryPage() {
             <Images size={36} strokeWidth={1.4} />
             <h2>相册还是空的</h2>
             <p>上传这段旅程的第一批照片，之后可按 Day 和地点浏览。</p>
-            <Link className="text-link" href={`/manage/photos?trip=${trip.id}`}>前往上传</Link>
+            <a className="text-link" href={`/manage/photos?trip=${trip.id}`}>前往上传</a>
           </div>
         )}
         {!state.loading && !state.error && !!photos.length && !filteredPhotos.length && (

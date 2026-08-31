@@ -46,8 +46,17 @@ a { color: inherit; }
 img { display: block; width: 100%; }
 button, input, textarea { font: inherit; }
 
-.page-shell { min-height: 100vh; }
-.page-shell > main { width: var(--page); margin: 0 auto; }
+.page-shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.page-shell > main {
+  width: var(--page);
+  flex: 1 0 auto;
+  margin: 0 auto;
+}
 
 .site-header {
   width: var(--page);

@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "wouter";
 import { Check, ImagePlus, LoaderCircle, Trash2, Upload } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
@@ -207,7 +206,7 @@ export default function PhotoManagerPage() {
             <h1>批量上传</h1>
             <p>R2 保存未压缩原图；相册网格使用浏览器生成的小预览图，点开后加载原图。</p>
           </div>
-          <Link className="text-link" href={`/photos/${trip.id}`}>查看相册 →</Link>
+          <a className="text-link" href={`/photos/${trip.id}`}>查看相册 →</a>
         </section>
 
         <form className="upload-panel" onSubmit={uploadAll}>
