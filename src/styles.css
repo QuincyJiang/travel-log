@@ -1853,6 +1853,39 @@ html.trip-view-transition::view-transition-new(trip-view-content) {
   font-size: 42px;
 }
 
+.managed-photo-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.managed-photo-actions p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.managed-photo-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.managed-photo-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .managed-photos-empty {
   padding: 48px 20px;
   border-top: 1px solid var(--line);
@@ -1998,6 +2031,7 @@ html.trip-view-transition::view-transition-new(trip-view-content) {
   .section-heading { display: block; margin-bottom: 24px; }
   .section-heading h2 { font-size: 46px; }
   .section-heading > p { margin-top: 16px; }
+  .managed-photo-actions { align-items: flex-start; margin-top: 16px; }
   .trip-hero { gap: 30px; padding: 52px 0 54px; }
   .trip-hero-copy h1 { font-size: 62px; }
   .trip-cover { min-height: 410px; border-radius: 3px 3px 64px 3px; }

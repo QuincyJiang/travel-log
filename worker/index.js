@@ -5,6 +5,7 @@ import {
   onRequestDelete as deletePhotos,
   onRequestPatch as updateFeaturedPhoto,
   onRequestPost as uploadPhotos,
+  onRequestPut as rebuildPhotoThumbnail,
 } from "../functions/api/admin/photos";
 import { onRequestGet as getPhotoFile } from "../functions/api/photo-file";
 import { json } from "../functions/_shared/photos";
@@ -24,6 +25,7 @@ export default {
 
     if (url.pathname === "/api/admin/photos") {
       if (request.method === "POST") return uploadPhotos(context);
+      if (request.method === "PUT") return rebuildPhotoThumbnail(context);
       if (request.method === "PATCH") return updateFeaturedPhoto(context);
       if (request.method === "DELETE") return deletePhotos(context);
       return methodNotAllowed();

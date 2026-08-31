@@ -147,7 +147,7 @@ export const toCustomMetadata = (metadata) => ({
   photo: encodeMetadata(metadata),
 });
 
-export function photoFromObject(object) {
+export function photoFromObject(object, thumbnailVersion = "") {
   const metadata = decodeMetadata(object.customMetadata?.photo);
   if (!metadata) return null;
 
@@ -169,12 +169,16 @@ export function photoFromObject(object) {
     height: metadata.height,
     size: metadata.size ?? object.size,
     displayUrl: photoUrl,
-    thumbnailUrl: `/api/photo-file?key=${encodeURIComponent(thumbnailKey)}`,
+    thumbnailUrl: [
+      `/api/photo-file?key=${encodeURIComponent(thumbnailKey)}`,
+      thumbnailVersion ? `&v=${encodeURIComponent(thumbnailVersion)}` : "",
+    ].join(""),
   };
 }
 
 export async function listTripPhotos(bucket, tripId) {
-  const photos = [];
+  const originalObjects = [];
+  const thumbnailVersions = new Map();
   let cursor;
 
   do {
@@ -186,14 +190,25 @@ export async function listTripPhotos(bucket, tripId) {
     });
 
     for (const object of result.objects) {
-      if (!/\/original\.(?:jpg|png|webp)$/.test(object.key)) continue;
-      const photo = photoFromObject(object);
-      if (photo) photos.push(photo);
+      if (/\/original\.(?:jpg|png|webp)$/.test(object.key)) {
+        originalObjects.push(object);
+      } else if (/\/thumbnail\.webp$/.test(object.key)) {
+        thumbnailVersions.set(object.key, object.etag);
+      }
     }
 
     cursor = result.truncated ? result.cursor : undefined;
   } while (cursor);
 
+  const photos = originalObjects
+    .map((object) => {
+      const thumbnailKey = object.key.replace(
+        /\/original\.(?:jpg|png|webp)$/,
+        "/thumbnail.webp",
+      );
+      return photoFromObject(object, thumbnailVersions.get(thumbnailKey));
+    })
+    .filter(Boolean);
   const featuredIds = (await listFeaturedSlots(bucket, tripId))
     .map(({ photoId }) => photoId);
   const featuredOrder = new Map(

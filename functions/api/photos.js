@@ -311,6 +311,59 @@ export async function onRequestPost({ request, env }) {
   }
 }
 
+export async function onRequestPut({ request, env }) {
+  const pathError = requireAdminPhotosPath(request);
+  if (pathError) return pathError;
+
+  try {
+    const formData = await request.formData();
+    const tripId = formData.get("tripId");
+    const day = Number(formData.get("day"));
+    const photoId = formData.get("photoId");
+    const thumbnail = formData.get("thumbnail");
+    if (!validTripId(tripId) || !validDay(day) || !validPhotoId(photoId)) {
+      return json({ error: "照片标识无效" }, { status: 400 });
+    }
+    const fileError = validateImageFile(
+      thumbnail,
+      "缩略图",
+      imageLimits.thumbnail,
+    );
+    if (fileError) return json({ error: fileError }, { status: 400 });
+    if (thumbnail.type !== "image/webp") {
+      return json({ error: "缩略图必须为 WebP" }, { status: 400 });
+    }
+
+    const bucket = requirePhotoBucket(env);
+    const prefix = photoPrefix(tripId, day, photoId);
+    const stored = await bucket.list({ prefix: `${prefix}/`, limit: 3 });
+    if (
+      !stored.objects.some((object) =>
+        /\/original\.(?:jpg|png|webp)$/.test(object.key),
+      )
+    ) {
+      return json({ error: "原图不存在" }, { status: 404 });
+    }
+
+    const thumbnailKey = `${prefix}/thumbnail.webp`;
+    const updated = await bucket.put(thumbnailKey, thumbnail.stream(), {
+      httpMetadata: {
+        contentType: "image/webp",
+        cacheControl: "no-store",
+      },
+    });
+    return json({
+      thumbnailUrl: [
+        `/api/photo-file?key=${encodeURIComponent(thumbnailKey)}`,
+        `&v=${encodeURIComponent(updated.etag)}`,
+      ].join(""),
+    });
+  } catch (error) {
+    console.error("Failed to rebuild photo thumbnail", error);
+    return json({ error: "缩略图更新失败" }, { status: 500 });
+  }
+}
+
 export async function onRequestDelete({ request, env }) {
   const pathError = requireAdminPhotosPath(request);
   if (pathError) return pathError;

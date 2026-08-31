@@ -95,7 +95,7 @@ const loadImage = async (file) => {
     await image.decode();
     return image;
   } catch {
-    throw new Error(`无法读取 ${file.name}`);
+    throw new Error(`无法读取${file.name ? ` ${file.name}` : "原图"}`);
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -108,12 +108,7 @@ const calculateChecksum = async (file) => {
     .join("");
 };
 
-export async function readPhotoDimensions(file) {
-  const [image, rawExif, checksum] = await Promise.all([
-    loadImage(file),
-    readExifMetadata(file),
-    calculateChecksum(file),
-  ]);
+const createThumbnail = async (image) => {
   const scale = Math.min(
     1,
     THUMBNAIL_MAX_EDGE / Math.max(image.naturalWidth, image.naturalHeight),
@@ -129,7 +124,7 @@ export async function readPhotoDimensions(file) {
   context.imageSmoothingQuality = "high";
   context.drawImage(image, 0, 0, width, height);
 
-  const thumbnail = await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob);
@@ -139,6 +134,18 @@ export async function readPhotoDimensions(file) {
       THUMBNAIL_QUALITY,
     );
   });
+};
+
+export const createPhotoThumbnail = async (file) =>
+  createThumbnail(await loadImage(file));
+
+export async function readPhotoDimensions(file) {
+  const [image, rawExif, checksum] = await Promise.all([
+    loadImage(file),
+    readExifMetadata(file),
+    calculateChecksum(file),
+  ]);
+  const thumbnail = await createThumbnail(image);
   const exifTakenAt = rawExif?.takenAt ?? "";
   const fallbackTakenAt = new Date(file.lastModified).toISOString();
 

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Check, ImagePlus, LoaderCircle, Trash2, Upload } from "lucide-react";
+import { ArrowRight, Check, ImagePlus, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import { trips } from "../data/trips";
-import { readPhotoDimensions } from "../lib/imageMetadata";
+import { createPhotoThumbnail, readPhotoDimensions } from "../lib/imageMetadata";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -55,6 +55,7 @@ export default function PhotoManagerPage() {
   const [deletingId, setDeletingId] = useState("");
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [rebuildProgress, setRebuildProgress] = useState(null);
   const dates = useMemo(() => tripDateEntries(trip), [trip]);
   const dayByDate = useMemo(
     () => new Map(dates.map((entry) => [entry.date, entry.day])),
@@ -341,6 +342,71 @@ export default function PhotoManagerPage() {
     }
   };
 
+  const rebuildThumbnails = async () => {
+    if (
+      !window.confirm(
+        `将读取 ${existingPhotos.length} 张原图并重新生成高清缩略图，确认继续？`,
+      )
+    ) {
+      return;
+    }
+
+    const photos = [...existingPhotos];
+    let nextIndex = 0;
+    let completed = 0;
+    let failed = 0;
+    setMessage("");
+    setRebuildProgress({ completed: 0, total: photos.length });
+
+    const rebuildNext = async () => {
+      while (nextIndex < photos.length) {
+        const photo = photos[nextIndex];
+        nextIndex += 1;
+        try {
+          const originalResponse = await fetch(photo.displayUrl, {
+            cache: "no-store",
+          });
+          if (!originalResponse.ok) throw new Error("原图读取失败");
+          const thumbnail = await createPhotoThumbnail(
+            await originalResponse.blob(),
+          );
+          const formData = new FormData();
+          formData.append("tripId", photo.tripId);
+          formData.append("day", String(photo.day));
+          formData.append("photoId", photo.id);
+          formData.append("thumbnail", thumbnail, "thumbnail.webp");
+          const response = await fetch("/api/admin/photos", {
+            method: "PUT",
+            body: formData,
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.error || "缩略图更新失败");
+        } catch (error) {
+          failed += 1;
+          console.error(`Failed to rebuild thumbnail for ${photo.id}`, error);
+        } finally {
+          completed += 1;
+          setRebuildProgress({ completed, total: photos.length });
+        }
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(2, photos.length) }, () => rebuildNext()),
+    );
+    let refreshError = "";
+    await refreshPhotos().catch((error) => {
+      refreshError = error.message;
+    });
+    setRebuildProgress(null);
+    setMessage(
+      refreshError ||
+      (failed
+        ? `${photos.length - failed} 张缩略图已更新，${failed} 张失败。`
+        : `${photos.length} 张高清缩略图已更新。`),
+    );
+  };
+
   return (
     <div className="page-shell photo-manager-page">
       <SiteHeader />
@@ -358,13 +424,13 @@ export default function PhotoManagerPage() {
           <div className="upload-fields">
             <label>
               <span>旅程</span>
-              <select disabled={uploading || processingCount > 0} value={tripId} onChange={(event) => setTripId(event.target.value)}>
+              <select disabled={uploading || !!rebuildProgress || processingCount > 0} value={tripId} onChange={(event) => setTripId(event.target.value)}>
                 {trips.map((item) => <option key={item.id} value={item.id}>{item.shortTitle}</option>)}
               </select>
             </label>
             <label>
               <span>地点</span>
-              <input disabled={uploading} value={place} onChange={(event) => setPlace(event.target.value)} maxLength={60} placeholder="例如：哈拉湖" />
+              <input disabled={uploading || !!rebuildProgress} value={place} onChange={(event) => setPlace(event.target.value)} maxLength={60} placeholder="例如：哈拉湖" />
             </label>
           </div>
 
@@ -375,6 +441,7 @@ export default function PhotoManagerPage() {
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              disabled={!!rebuildProgress}
               multiple
               onChange={(event) => {
                 selectFiles(event.target.files);
@@ -447,14 +514,14 @@ export default function PhotoManagerPage() {
           <div className="upload-submit">
             <p aria-live="polite">{message}</p>
             {allUploaded ? (
-              <button type="button" onClick={continueUploading}>
+              <button type="button" disabled={!!rebuildProgress} onClick={continueUploading}>
                 继续上传
                 <ArrowRight size={17} />
               </button>
             ) : (
               <button
                 type="submit"
-                disabled={uploading || processingCount > 0 || unresolvedCount > 0 || uploadableItems.length === 0}
+                disabled={uploading || !!rebuildProgress || processingCount > 0 || unresolvedCount > 0 || uploadableItems.length === 0}
               >
                 {uploading ? <LoaderCircle className="spin" size={17} /> : <Upload size={17} />}
                 {uploading
@@ -477,7 +544,25 @@ export default function PhotoManagerPage() {
               <span className="section-index">PHOTO LIBRARY</span>
               <h2 id="managed-photos-title">已上传照片</h2>
             </div>
-            <p>{existingPhotos.length} 张 · {trip.shortTitle}</p>
+            <div className="managed-photo-actions">
+              <p>{existingPhotos.length} 张 · {trip.shortTitle}</p>
+              {!!existingPhotos.length && (
+                <button
+                  type="button"
+                  disabled={!!rebuildProgress || uploading}
+                  onClick={rebuildThumbnails}
+                >
+                  {rebuildProgress ? (
+                    <LoaderCircle className="spin" size={15} />
+                  ) : (
+                    <RefreshCw size={15} />
+                  )}
+                  {rebuildProgress
+                    ? `重建中 ${rebuildProgress.completed}/${rebuildProgress.total}`
+                    : "重建高清缩略图"}
+                </button>
+              )}
+            </div>
           </div>
           {!existingPhotos.length ? (
             <div className="managed-photos-empty">当前旅程还没有已上传照片。</div>
@@ -492,7 +577,7 @@ export default function PhotoManagerPage() {
                   </div>
                   <button
                     type="button"
-                    disabled={deletingId === photo.id}
+                    disabled={deletingId === photo.id || !!rebuildProgress}
                     onClick={() => deletePhoto(photo)}
                     aria-label={`删除 ${photo.caption || "旅行照片"}`}
                   >
