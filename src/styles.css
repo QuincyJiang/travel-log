@@ -113,14 +113,6 @@ button, input, textarea { font: inherit; }
 
 .pill-nav a.active { background: var(--ink); color: var(--white); }
 
-.header-note {
-  justify-self: end;
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
 .section-index,
 .eyebrow,
 .footer-kicker {
@@ -807,12 +799,6 @@ button, input, textarea { font: inherit; }
   width: calc(100% - var(--gallery-gutter) - var(--gallery-gutter));
   margin-right: auto;
   margin-left: auto;
-}
-
-.photo-page .trip-view-nav {
-  width: fit-content;
-  margin-right: var(--gallery-gutter);
-  margin-left: var(--gallery-gutter);
 }
 
 .photo-page .site-footer {
@@ -1935,7 +1921,6 @@ button, input, textarea { font: inherit; }
 
 @media (max-width: 900px) {
   :root { --page: min(100% - 32px, 760px); }
-  .header-note { display: none; }
   .site-header { grid-template-columns: 1fr auto; }
   .home-title-wrap h1 { font-size: 150px; }
   .section-heading h2 { font-size: 58px; }

@@ -5,7 +5,6 @@ import { Check, Download, Camera, ChevronLeft, ChevronRight, Images, LoaderCircl
 import { downloadZip } from "client-zip";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
-import TripViewNav from "../components/TripViewNav";
 import { getTrip } from "../data/trips";
 import { readExifMetadata } from "../lib/imageMetadata";
 import NotFoundPage from "./NotFoundPage";
@@ -644,8 +643,6 @@ export default function PhotoGalleryPage() {
     <div className="page-shell photo-page">
       <SiteHeader trip={trip} />
       <main>
-        <TripViewNav trip={trip} />
-
         <section className="photo-hero">
           <div>
             <span className="eyebrow">PHOTO ARCHIVE</span>

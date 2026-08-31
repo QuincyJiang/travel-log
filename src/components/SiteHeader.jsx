@@ -16,7 +16,6 @@ export default function SiteHeader({ trip }) {
         <Link className={location === "/" ? "active" : ""} href="/">旅程</Link>
         {trip && <Link className={location.startsWith(`/trips/${trip.id}`) ? "active" : ""} href={`/trips/${trip.id}`}>当前行程</Link>}
       </nav>
-      <span className="header-note">Plans · Maps · Notes</span>
     </header>
   );
 }
