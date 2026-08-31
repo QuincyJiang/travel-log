@@ -788,11 +788,15 @@ button, input, textarea { font: inherit; }
 .day-pagination b { font-family: var(--display); font-size: 17px; }
 
 /* Photo gallery */
+.photo-page {
+  --gallery-gutter: clamp(16px, 2vw, 28px);
+}
+
 .photo-page > main {
   width: 100%;
 }
 
-.photo-page .trip-view-nav,
+.photo-page .site-header,
 .photo-page .photo-hero,
 .photo-page .photo-filters,
 .photo-page .photo-selection-bar,
@@ -800,9 +804,20 @@ button, input, textarea { font: inherit; }
 .photo-page .photo-state,
 .photo-page .photo-empty,
 .photo-page .back-row {
-  width: var(--page);
+  width: calc(100% - var(--gallery-gutter) - var(--gallery-gutter));
   margin-right: auto;
   margin-left: auto;
+}
+
+.photo-page .trip-view-nav {
+  width: fit-content;
+  margin-right: var(--gallery-gutter);
+  margin-left: var(--gallery-gutter);
+}
+
+.photo-page .site-footer {
+  padding-right: var(--gallery-gutter);
+  padding-left: var(--gallery-gutter);
 }
 
 .photo-hero,
@@ -1064,11 +1079,21 @@ button, input, textarea { font: inherit; }
 }
 
 .photo-gallery-layout {
+  --timeline-gap: 18px;
+  --timeline-width: 112px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 112px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) var(--timeline-width);
+  gap: var(--timeline-gap);
   width: 100%;
-  padding: 12px max(12px, calc((100vw - 1920px) / 2)) 100px;
+  padding: 12px var(--gallery-gutter) 100px;
+  transition:
+    grid-template-columns 0.55s cubic-bezier(0.22, 0.7, 0.25, 1),
+    gap 0.55s cubic-bezier(0.22, 0.7, 0.25, 1);
+}
+
+.photo-gallery-layout.timeline-hidden {
+  --timeline-gap: 0px;
+  --timeline-width: 0px;
 }
 
 .gallery-wall {
@@ -1076,6 +1101,7 @@ button, input, textarea { font: inherit; }
   gap: 8px;
   min-width: 0;
   padding: 0;
+  view-transition-name: gallery-wall;
 }
 
 .gallery-wall.layout-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1123,8 +1149,30 @@ button, input, textarea { font: inherit; }
   top: 30px;
   z-index: 5;
   margin-top: 0;
+  overflow: hidden;
   padding-left: 20px;
   border-left: 1px solid var(--line);
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity 0.35s ease 0.12s,
+    transform 0.55s cubic-bezier(0.22, 0.7, 0.25, 1),
+    border-color 0.35s ease,
+    visibility 0s linear;
+  view-transition-name: gallery-timeline;
+}
+
+.timeline-hidden .photo-timeline {
+  visibility: hidden;
+  border-color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(16px);
+  transition:
+    opacity 0.24s ease,
+    transform 0.45s cubic-bezier(0.22, 0.7, 0.25, 1),
+    border-color 0.24s ease,
+    visibility 0s linear 0.55s;
 }
 
 .photo-timeline > span {
@@ -1190,6 +1238,18 @@ button, input, textarea { font: inherit; }
   grid-column: 2;
   margin-top: 3px;
   font-size: 8px;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-group(gallery-wall),
+::view-transition-group(gallery-timeline) {
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.22, 0.7, 0.25, 1);
 }
 
 .photo-grid button {
@@ -1892,7 +1952,7 @@ button, input, textarea { font: inherit; }
   .day-content-grid { grid-template-columns: 1fr; }
   .food-layout { grid-template-columns: 1fr; }
   .upload-preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .photo-gallery-layout { grid-template-columns: minmax(0, 1fr) 92px; gap: 10px; padding-right: 8px; padding-left: 8px; }
+  .photo-gallery-layout { --timeline-gap: 10px; --timeline-width: 92px; }
   .managed-photo-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
@@ -1967,7 +2027,8 @@ button, input, textarea { font: inherit; }
   .photo-place-filter { min-width: 128px; }
   .photo-selection-bar { align-items: flex-start; flex-direction: column; }
   .photo-selection-bar > div { justify-content: flex-start; }
-  .photo-gallery-layout { grid-template-columns: minmax(0, 1fr) 52px; gap: 6px; padding: 6px 4px 54px; }
+  .photo-page { --gallery-gutter: 12px; }
+  .photo-gallery-layout { --timeline-gap: 6px; --timeline-width: 52px; padding-top: 6px; padding-bottom: 54px; }
   .gallery-wall { gap: 4px; }
   .photo-timeline { top: 18px; margin-top: 0; padding-left: 7px; }
   .photo-timeline > span { font-size: 6px; letter-spacing: 0.1em; }
@@ -1997,4 +2058,5 @@ button, input, textarea { font: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  ::view-transition-group(*) { animation-duration: 0.01ms !important; }
 }

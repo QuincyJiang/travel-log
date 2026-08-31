@@ -518,6 +518,30 @@ export default function PhotoGalleryPage() {
     });
   };
 
+  const switchCollection = (nextCollection) => {
+    if (nextCollection === collection) return;
+    const updateCollection = () => {
+      setCollection(nextCollection);
+      if (placeFilter === "all") return;
+      const nextPhotos = nextCollection === "featured"
+        ? photos.filter((photo) => photo.featured)
+        : photos;
+      if (!nextPhotos.some((photo) => photo.place === placeFilter)) {
+        setPlaceFilter("all");
+      }
+    };
+    if (
+      document.startViewTransition &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      document.startViewTransition(() => {
+        flushSync(updateCollection);
+      });
+      return;
+    }
+    updateCollection();
+  };
+
   const downloadSelected = async () => {
     setBulkAction("download");
     setBulkMessage("");
@@ -639,10 +663,10 @@ export default function PhotoGalleryPage() {
             <div className="photo-collection-tabs">
               <span>COLLECTION</span>
               <div>
-                <button className={collection === "featured" ? "active" : ""} onClick={() => setCollection("featured")} type="button">
+                <button className={collection === "featured" ? "active" : ""} onClick={() => switchCollection("featured")} type="button">
                   精选 <sup>{String(featuredPhotos.length).padStart(2, "0")}</sup>
                 </button>
-                <button className={collection === "all" ? "active" : ""} onClick={() => setCollection("all")} type="button">
+                <button className={collection === "all" ? "active" : ""} onClick={() => switchCollection("all")} type="button">
                   全部 <sup>{String(photos.length).padStart(2, "0")}</sup>
                 </button>
               </div>
@@ -725,13 +749,13 @@ export default function PhotoGalleryPage() {
             <h2>{collection === "featured" ? "还没有精选照片" : "当前筛选下没有照片"}</h2>
             <p>{collection === "featured" ? "切换到全部照片，通过右键或长按选择照片加入精选。" : "调整地点筛选后重试。"}</p>
             {collection === "featured" && (
-              <button className="text-link" type="button" onClick={() => setCollection("all")}>查看全部照片</button>
+              <button className="text-link" type="button" onClick={() => switchCollection("all")}>查看全部照片</button>
             )}
           </div>
         )}
 
         {!!filteredPhotos.length && (
-          <div className="photo-gallery-layout">
+          <div className={`photo-gallery-layout ${collection === "featured" ? "timeline-hidden" : ""}`}>
             <section
               className={`photo-grid gallery-wall layout-${layoutMode}`}
               aria-label={`${trip.shortTitle}照片`}
@@ -765,12 +789,19 @@ export default function PhotoGalleryPage() {
                 </button>
               ))}
             </section>
-            <aside className="photo-timeline" aria-label="相册时间轴">
+            <aside
+              className="photo-timeline"
+              aria-hidden={collection === "featured"}
+              aria-label="相册时间轴"
+            >
               <span>JOURNEY</span>
               <ol>
                 {photoGroups.map((group) => (
                   <li key={group.day}>
-                    <a href={`#photo-day-${group.day}`}>
+                    <a
+                      href={`#photo-day-${group.day}`}
+                      tabIndex={collection === "featured" ? -1 : undefined}
+                    >
                       <i />
                       <span>Day {group.day}</span>
                       <small>{group.itinerary?.date}</small>
