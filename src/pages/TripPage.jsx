@@ -4,6 +4,7 @@ import SiteFooter from "../components/SiteFooter";
 import OverviewMap from "../components/OverviewMap";
 import StayOverview from "../components/StayOverview";
 import DayCard from "../components/DayCard";
+import TripViewNav from "../components/TripViewNav";
 import { getTrip } from "../data/trips";
 import NotFoundPage from "./NotFoundPage";
 
@@ -17,6 +18,7 @@ export default function TripPage() {
     <div className="page-shell trip-page">
       <SiteHeader trip={trip} />
       <main>
+        <TripViewNav trip={trip} />
         <section className="trip-hero">
           <div className="trip-hero-copy">
             <span className="eyebrow">{trip.eyebrow}</span>

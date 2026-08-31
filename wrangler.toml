@@ -1,0 +1,7 @@
+name = "travel-log"
+compatibility_date = "2025-07-18"
+pages_build_output_dir = "./dist"
+
+[[r2_buckets]]
+binding = "TRAVEL_PHOTOS"
+bucket_name = "travel-log"

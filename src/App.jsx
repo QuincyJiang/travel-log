@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import HomePage from "./pages/HomePage";
 import TripPage from "./pages/TripPage";
 import DayPage from "./pages/DayPage";
+import PhotoGalleryPage from "./pages/PhotoGalleryPage";
+import PhotoManagerPage from "./pages/PhotoManagerPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 function ScrollToTop() {
@@ -21,6 +23,8 @@ export default function App() {
       <ScrollToTop />
       <Switch>
         <Route path="/" component={HomePage} />
+        <Route path="/manage/photos" component={PhotoManagerPage} />
+        <Route path="/trips/:tripId/photos" component={PhotoGalleryPage} />
         <Route path="/trips/:tripId/day/:dayNumber" component={DayPage} />
         <Route path="/trips/:tripId" component={TripPage} />
         <Route component={NotFoundPage} />

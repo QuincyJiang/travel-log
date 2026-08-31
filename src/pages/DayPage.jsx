@@ -22,7 +22,7 @@ export default function DayPage() {
       <SiteHeader trip={trip} />
       <main>
         <div className="day-breadcrumb">
-          <Link href={`/trips/${trip.id}`}>东北秋季环线</Link>
+          <Link href={`/trips/${trip.id}`}>{trip.shortTitle}</Link>
           <span>/</span>
           <b>DAY {String(day.day).padStart(2, "0")}</b>
         </div>
