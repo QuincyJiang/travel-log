@@ -1232,6 +1232,44 @@ button, input, textarea { font: inherit; }
   mix-blend-mode: normal;
 }
 
+html.trip-view-transition .page-shell > .site-header {
+  view-transition-name: trip-view-header;
+}
+
+html.trip-view-transition .page-shell > main {
+  view-transition-name: trip-view-content;
+}
+
+html.trip-view-transition::view-transition-group(trip-view-header),
+html.trip-view-transition::view-transition-group(trip-view-content) {
+  animation-duration: 0.48s;
+  animation-timing-function: cubic-bezier(0.22, 0.7, 0.25, 1);
+}
+
+html.trip-view-transition::view-transition-old(trip-view-header),
+html.trip-view-transition::view-transition-old(trip-view-content) {
+  animation: trip-view-out 0.22s ease both;
+}
+
+html.trip-view-transition::view-transition-new(trip-view-header),
+html.trip-view-transition::view-transition-new(trip-view-content) {
+  animation: trip-view-in 0.38s 0.1s cubic-bezier(0.22, 0.7, 0.25, 1) both;
+}
+
+@keyframes trip-view-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes trip-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 ::view-transition-group(gallery-wall),
 ::view-transition-group(gallery-timeline) {
   animation-duration: 0.55s;

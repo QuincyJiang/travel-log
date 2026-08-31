@@ -10,9 +10,9 @@ export default function TripViewNav({ trip }) {
       <Link className={!isPhotos ? "active" : ""} href={`/trips/${trip.id}`}>
         行程攻略
       </Link>
-      <a className={isPhotos ? "active" : ""} href={photosPath}>
+      <Link className={isPhotos ? "active" : ""} href={photosPath}>
         影像相册
-      </a>
+      </Link>
     </nav>
   );
 }
