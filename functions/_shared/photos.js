@@ -68,26 +68,6 @@ const writeFeaturedIndex = async (bucket, tripId, ids, etag) =>
     httpMetadata: { contentType: "application/json" },
   });
 
-const listStoredPhotoIds = async (bucket, tripId) => {
-  const ids = new Set();
-  let cursor;
-  do {
-    const result = await bucket.list({
-      prefix: `${PHOTO_PREFIX}/${tripId}/`,
-      cursor,
-      limit: 1000,
-    });
-    result.objects.forEach((object) => {
-      const photoId = object.key.match(
-        /\/([a-f0-9-]{36})\/original\.(?:jpg|png|webp)$/,
-      )?.[1];
-      if (photoId) ids.add(photoId);
-    });
-    cursor = result.truncated ? result.cursor : undefined;
-  } while (cursor);
-  return ids;
-};
-
 export async function listFeaturedSlots(bucket, tripId) {
   const { ids } = await readFeaturedIndex(bucket, tripId);
   return ids.map((photoId, index) => ({
@@ -97,40 +77,35 @@ export async function listFeaturedSlots(bucket, tripId) {
   }));
 }
 
-export async function featurePhoto(bucket, tripId, photoId) {
+export async function updateFeaturedPhotos(bucket, tripId, photoIds, featured) {
+  const requestedIds = [...new Set(photoIds)];
   for (let attempt = 0; attempt < MAX_FEATURED_UPDATE_ATTEMPTS; attempt += 1) {
     const { ids, etag } = await readFeaturedIndex(bucket, tripId);
-    const existingIndex = ids.indexOf(photoId);
-    if (existingIndex >= 0) return existingIndex + 1;
-    if (ids.length >= MAX_FEATURED_PHOTOS) {
-      const storedPhotoIds = await listStoredPhotoIds(bucket, tripId);
-      const validIds = ids.filter((id) => storedPhotoIds.has(id));
-      if (validIds.length === ids.length) return null;
-      if (await writeFeaturedIndex(bucket, tripId, validIds, etag)) continue;
-      continue;
+    const nextIds = featured
+      ? [...ids, ...requestedIds.filter((photoId) => !ids.includes(photoId))]
+      : ids.filter((photoId) => !requestedIds.includes(photoId));
+    if (nextIds.length > MAX_FEATURED_PHOTOS) return null;
+    if (nextIds.length === ids.length && nextIds.every((id, index) => id === ids[index])) {
+      return ids;
     }
-    const nextIds = [...ids, photoId];
     if (await writeFeaturedIndex(bucket, tripId, nextIds, etag)) {
-      return nextIds.length;
+      return nextIds;
     }
   }
   throw new Error("Featured index is busy");
+}
+
+export async function featurePhoto(bucket, tripId, photoId) {
+  const ids = await updateFeaturedPhotos(bucket, tripId, [photoId], true);
+  return ids ? ids.indexOf(photoId) + 1 : null;
 }
 
 export async function unfeaturePhoto(bucket, tripId, photoId) {
   return unfeaturePhotos(bucket, tripId, [photoId]);
 }
 
-export async function unfeaturePhotos(bucket, tripId, photoIds) {
-  const idsToRemove = new Set(photoIds);
-  for (let attempt = 0; attempt < MAX_FEATURED_UPDATE_ATTEMPTS; attempt += 1) {
-    const { ids, etag } = await readFeaturedIndex(bucket, tripId);
-    if (!ids.some((id) => idsToRemove.has(id))) return;
-    const nextIds = ids.filter((id) => !idsToRemove.has(id));
-    if (await writeFeaturedIndex(bucket, tripId, nextIds, etag)) return;
-  }
-  throw new Error("Featured index is busy");
-}
+export const unfeaturePhotos = (bucket, tripId, photoIds) =>
+  updateFeaturedPhotos(bucket, tripId, photoIds, false);
 
 export function validateImageFile(file, label, maxSize) {
   if (!file || typeof file.arrayBuffer !== "function") {

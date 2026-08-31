@@ -1,6 +1,5 @@
 import {
   checksumKey,
-  featurePhoto,
   imageLimits,
   json,
   listTripPhotos,
@@ -9,8 +8,8 @@ import {
   photoPrefix,
   requirePhotoBucket,
   toCustomMetadata,
-  unfeaturePhoto,
   unfeaturePhotos,
+  updateFeaturedPhotos,
   validDay,
   validPhotoId,
   validTripId,
@@ -379,44 +378,79 @@ export async function onRequestDelete({ request, env }) {
 
 export async function onRequestPatch({ request, env }) {
   try {
-    const { tripId, day, photoId, featured } = await request.json();
+    const startedAt = Date.now();
+    const payload = await request.json();
+    const { tripId, featured } = payload;
+    const photos = Array.isArray(payload.photos)
+      ? payload.photos
+      : [{ day: payload.day, photoId: payload.photoId }];
     if (
       !validTripId(tripId) ||
-      !validDay(day) ||
-      !validPhotoId(photoId) ||
-      typeof featured !== "boolean"
+      typeof featured !== "boolean" ||
+      !photos.length ||
+      photos.length > 100 ||
+      photos.some(({ day, photoId }) => !validDay(day) || !validPhotoId(photoId))
     ) {
       return json({ error: "精选参数无效" }, { status: 400 });
     }
 
     const bucket = requirePhotoBucket(env);
-    const photo = (await listTripPhotos(bucket, tripId)).find(
-      (item) => item.id === photoId && item.day === Number(day),
+    const uniquePhotos = [
+      ...new Map(photos.map((photo) => [photo.photoId, photo])).values(),
+    ];
+    if (featured) {
+      const storedPhotos = await Promise.all(
+        uniquePhotos.map(({ day, photoId }) =>
+          bucket.list({
+            prefix: `${photoPrefix(tripId, Number(day), photoId)}/`,
+            limit: 3,
+          }),
+        ),
+      );
+      const missingPhoto = storedPhotos.some(
+        (result) =>
+          !result.objects.some((object) =>
+            /\/original\.(?:jpg|png|webp)$/.test(object.key),
+          ),
+      );
+      if (missingPhoto) {
+        return json({ error: "部分照片不存在，请刷新相册后重试" }, { status: 404 });
+      }
+    }
+    const validationFinishedAt = Date.now();
+
+    const featuredIds = await updateFeaturedPhotos(
+      bucket,
+      tripId,
+      uniquePhotos.map(({ photoId }) => photoId),
+      featured,
     );
-    if (!photo) {
-      return json({ error: "照片不存在" }, { status: 404 });
-    }
-
-    if (!featured) {
-      await unfeaturePhoto(bucket, tripId, photoId);
-      return json({ featured: false, featuredOrder: null });
-    }
-
-    const slot = await featurePhoto(bucket, tripId, photoId);
-    if (!slot) {
+    if (!featuredIds) {
       return json(
         { error: `每段旅程最多精选 ${MAX_FEATURED_PHOTOS} 张照片` },
         { status: 409 },
       );
     }
-    const stillExists = (await listTripPhotos(bucket, tripId)).some(
-      (item) => item.id === photoId && item.day === Number(day),
+    const featuredOrder = new Map(
+      featuredIds.map((photoId, index) => [photoId, index + 1]),
     );
-    if (!stillExists) {
-      await unfeaturePhoto(bucket, tripId, photoId);
-      return json({ error: "照片不存在" }, { status: 404 });
-    }
-    return json({ featured: true, featuredOrder: slot });
+    const results = uniquePhotos.map(({ photoId }) => ({
+      photoId,
+      featured,
+      featuredOrder: featuredOrder.get(photoId) ?? null,
+    }));
+    return json({
+      featured,
+      featuredOrder: results.length === 1 ? results[0].featuredOrder : undefined,
+      photos: results,
+    }, {
+      headers: {
+        "server-timing": [
+          `photo-check;dur=${validationFinishedAt - startedAt}`,
+          `featured-index;dur=${Date.now() - validationFinishedAt}`,
+        ].join(", "),
+      },
+    });
   } catch (error) {
     console.error("Failed to update featured photo", error);
     return json({ error: "精选状态更新失败" }, { status: 500 });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Link, useParams } from "wouter";
 import { Check, Download, Camera, ChevronLeft, ChevronRight, Images, LoaderCircle, RotateCcw, Star, Trash2, Upload, X, ZoomIn, ZoomOut } from "lucide-react";
 import { downloadZip } from "client-zip";
@@ -89,6 +90,11 @@ const MAX_FEATURED_PHOTOS = 16;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
 const ZOOM_STEP = 0.5;
+const GALLERY_LAYOUTS = [
+  { id: "two", columns: 2, label: "双列布局" },
+  { id: "three", columns: 3, label: "三列布局" },
+  { id: "four", columns: 4, label: "四列布局" },
+];
 
 export default function PhotoGalleryPage() {
   const { tripId } = useParams();
@@ -102,6 +108,7 @@ export default function PhotoGalleryPage() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkAction, setBulkAction] = useState("");
   const [bulkMessage, setBulkMessage] = useState("");
+  const [layoutMode, setLayoutMode] = useState("three");
   const [imageView, setImageView] = useState({ zoom: 1, x: 0, y: 0 });
   const [state, setState] = useState({ loading: true, error: "" });
   const longPressTimer = useRef(null);
@@ -111,6 +118,7 @@ export default function PhotoGalleryPage() {
   const imageContentRef = useRef(null);
   const imageStageRef = useRef(null);
   const imageViewRef = useRef(imageView);
+  const galleryWallRef = useRef(null);
   const suppressImageClick = useRef(false);
 
   useEffect(() => {
@@ -168,6 +176,10 @@ export default function PhotoGalleryPage() {
         itinerary: trip?.days.find((item) => item.day === day),
       }));
   }, [filteredPhotos, trip?.days]);
+  const dayAnchorPhotoIds = useMemo(
+    () => new Set(photoGroups.map((group) => group.items[0].photo.id)),
+    [photoGroups],
+  );
   const activePhoto = activeIndex === null ? null : filteredPhotos[activeIndex];
   const activeExif = activePhoto?.exif ?? parsedExif[activePhoto?.id];
   const photoDetails = activePhoto ? getPhotoDetails({ ...activePhoto, exif: activeExif }) : [];
@@ -395,29 +407,33 @@ export default function PhotoGalleryPage() {
     setBulkMessage("");
   };
 
-  const updateFeaturedPhoto = async (photo, featured) => {
+  const updateFeaturedSelection = async (targetPhotos, featured) => {
     const response = await fetch("/api/photos", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        tripId: photo.tripId,
-        day: photo.day,
-        photoId: photo.id,
+        tripId: trip.id,
         featured,
+        photos: targetPhotos.map((photo) => ({
+          day: photo.day,
+          photoId: photo.id,
+        })),
       }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "精选状态更新失败");
+    const updates = new Map(data.photos.map((photo) => [photo.photoId, photo]));
     setPhotos((current) =>
-      current.map((item) =>
-        item.id === photo.id
+      current.map((item) => {
+        const update = updates.get(item.id);
+        return update
           ? {
               ...item,
-              featured: data.featured,
-              featuredOrder: data.featuredOrder,
+              featured: update.featured,
+              featuredOrder: update.featuredOrder,
             }
-          : item,
-      ),
+          : item;
+      }),
     );
     return data;
   };
@@ -430,7 +446,7 @@ export default function PhotoGalleryPage() {
     }
     setBulkAction("feature");
     try {
-      await updateFeaturedPhoto(activePhoto, !activePhoto.featured);
+      await updateFeaturedSelection([activePhoto], !activePhoto.featured);
       if (collection === "featured" && activePhoto.featured) setActiveIndex(null);
     } catch (error) {
       setBulkMessage(error.message);
@@ -449,24 +465,57 @@ export default function PhotoGalleryPage() {
 
     setBulkAction("feature");
     setBulkMessage("");
-    let updated = 0;
-    let failed = 0;
-    for (const photo of selectedPhotos) {
-      if (photo.featured === shouldFeature) continue;
-      try {
-        await updateFeaturedPhoto(photo, shouldFeature);
-        updated += 1;
-      } catch {
-        failed += 1;
-      }
-    }
-    setSelectedIds(new Set());
-    setBulkMessage(
-      failed
-        ? `${updated} 张已更新，${failed} 张失败。`
-        : `${updated} 张已${shouldFeature ? "加入" : "移出"}精选。`,
+    const targetPhotos = selectedPhotos.filter(
+      (photo) => photo.featured !== shouldFeature,
     );
-    setBulkAction("");
+    try {
+      await updateFeaturedSelection(targetPhotos, shouldFeature);
+      setSelectedIds(new Set());
+      setBulkMessage(`${targetPhotos.length} 张已${shouldFeature ? "加入" : "移出"}精选。`);
+    } catch (error) {
+      setBulkMessage(error.message || "精选状态更新失败");
+    } finally {
+      setBulkAction("");
+    }
+  };
+
+  const switchLayout = (nextLayout) => {
+    if (nextLayout === layoutMode) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const visibleTiles = [...(galleryWallRef.current?.children ?? [])].filter((tile) => {
+      const bounds = tile.getBoundingClientRect();
+      return bounds.bottom > 0 && bounds.top < window.innerHeight;
+    });
+    if (reduceMotion || !visibleTiles.length || typeof visibleTiles[0].animate !== "function") {
+      setLayoutMode(nextLayout);
+      return;
+    }
+    visibleTiles.forEach((tile) => {
+      tile.getAnimations?.().forEach((animation) => animation.cancel());
+    });
+    const previousBounds = new Map(
+      visibleTiles.map((tile) => [tile, tile.getBoundingClientRect()]),
+    );
+    flushSync(() => setLayoutMode(nextLayout));
+    requestAnimationFrame(() => {
+      visibleTiles.forEach((tile) => {
+        const before = previousBounds.get(tile);
+        const after = tile.getBoundingClientRect();
+        tile.animate(
+          [
+            {
+              transform: `translate(${before.left - after.left}px, ${before.top - after.top}px) scale(${before.width / after.width}, ${before.height / after.height})`,
+              transformOrigin: "top left",
+            },
+            { transform: "none", transformOrigin: "top left" },
+          ],
+          {
+            duration: 550,
+            easing: "cubic-bezier(0.22, 0.7, 0.25, 1)",
+          },
+        );
+      });
+    });
   };
 
   const downloadSelected = async () => {
@@ -598,17 +647,40 @@ export default function PhotoGalleryPage() {
                 </button>
               </div>
             </div>
-            {!!places.length && (
-              <label className="photo-place-filter">
-                <span>LOCATION</span>
-                <div>
+            <div className="photo-filter-actions">
+              {!!places.length && (
+                <label className="photo-place-filter">
+                  <span>LOCATION</span>
                   <select value={placeFilter} onChange={(event) => setPlaceFilter(event.target.value)}>
                     <option value="all">全部地点</option>
                     {places.map((place) => <option key={place} value={place}>{place}</option>)}
                   </select>
+                </label>
+              )}
+              <div className="photo-layout-switcher" aria-label="照片墙布局">
+                <span>LAYOUT</span>
+                <div>
+                  {GALLERY_LAYOUTS.map((layout) => (
+                    <button
+                      className={layoutMode === layout.id ? "active" : ""}
+                      key={layout.id}
+                      type="button"
+                      onClick={() => switchLayout(layout.id)}
+                      aria-label={layout.label}
+                      aria-pressed={layoutMode === layout.id}
+                      title={layout.label}
+                    >
+                      <i className={`layout-icon layout-icon-${layout.columns}`} aria-hidden="true">
+                        {Array.from(
+                          { length: layout.columns === 2 ? 2 : layout.columns * 2 },
+                          (_, index) => <b key={index} />,
+                        )}
+                      </i>
+                    </button>
+                  ))}
                 </div>
-              </label>
-            )}
+              </div>
+            </div>
           </section>
         )}
 
@@ -660,48 +732,39 @@ export default function PhotoGalleryPage() {
 
         {!!filteredPhotos.length && (
           <div className="photo-gallery-layout">
-            <div className="photo-gallery-stream" aria-label={`${trip.shortTitle}照片`}>
-              {photoGroups.map((group) => (
-                <section className="photo-chapter" id={`photo-day-${group.day}`} key={group.day}>
-                  <header>
-                    <div>
-                      <span>CHAPTER {String(group.day).padStart(2, "0")}</span>
-                      <h2>Day {group.day}</h2>
-                    </div>
-                    <p>{group.itinerary?.date}{group.itinerary?.title ? ` / ${group.itinerary.title}` : ""}</p>
-                  </header>
-                  <div className="photo-grid editorial-photo-grid">
-                    {group.items.map(({ photo, index }, chapterIndex) => (
-                      <button
-                        key={photo.id}
-                        type="button"
-                        className={`${selectedIds.has(photo.id) ? "selected" : ""} photo-layout-${chapterIndex % 8}`}
-                        aria-pressed={selectedIds.has(photo.id)}
-                        onClick={() => openOrSelectPhoto(photo, index)}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          if (ignoreClickId.current === photo.id) return;
-                          toggleSelection(photo.id);
-                        }}
-                        onPointerCancel={cancelLongPress}
-                        onPointerDown={(event) => startLongPress(event, photo.id)}
-                        onPointerLeave={cancelLongPress}
-                        onPointerMove={moveLongPress}
-                        onPointerUp={cancelLongPress}
-                        style={{ aspectRatio: photo.width && photo.height ? `${photo.width} / ${photo.height}` : "4 / 3" }}
-                      >
-                        <img src={photo.thumbnailUrl} alt={photo.caption || photo.place || `Day ${photo.day}`} loading="lazy" />
-                        <i className="photo-selection-indicator"><Check size={15} strokeWidth={2.4} /></i>
-                        <span>
-                          <b>{String(index + 1).padStart(2, "0")}</b>
-                          <small>{photo.place || photo.caption || "旅行影像"}</small>
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
+            <section
+              className={`photo-grid gallery-wall layout-${layoutMode}`}
+              aria-label={`${trip.shortTitle}照片`}
+              ref={galleryWallRef}
+            >
+              {filteredPhotos.map((photo, index) => (
+                <button
+                  id={dayAnchorPhotoIds.has(photo.id) ? `photo-day-${photo.day}` : undefined}
+                  key={photo.id}
+                  type="button"
+                  className={selectedIds.has(photo.id) ? "selected" : ""}
+                  aria-pressed={selectedIds.has(photo.id)}
+                  onClick={() => openOrSelectPhoto(photo, index)}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    if (ignoreClickId.current === photo.id) return;
+                    toggleSelection(photo.id);
+                  }}
+                  onPointerCancel={cancelLongPress}
+                  onPointerDown={(event) => startLongPress(event, photo.id)}
+                  onPointerLeave={cancelLongPress}
+                  onPointerMove={moveLongPress}
+                  onPointerUp={cancelLongPress}
+                >
+                  <img src={photo.thumbnailUrl} alt={photo.caption || photo.place || `Day ${photo.day}`} loading="lazy" />
+                  <i className="photo-selection-indicator"><Check size={15} strokeWidth={2.4} /></i>
+                  <span>
+                    <b>{String(index + 1).padStart(2, "0")}</b>
+                    <small>{photo.place || photo.caption || "旅行影像"}</small>
+                  </span>
+                </button>
               ))}
-            </div>
+            </section>
             <aside className="photo-timeline" aria-label="相册时间轴">
               <span>JOURNEY</span>
               <ol>
