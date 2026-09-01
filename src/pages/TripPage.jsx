@@ -60,6 +60,20 @@ export default function TripPage() {
           </div>
         </section>
 
+        {!!trip.imageCredits.length && (
+          <details className="image-credits">
+            <summary>图片来源与授权</summary>
+            <ul>
+              {trip.imageCredits.map(([subject, attribution, sourceUrl]) => (
+                <li key={`${subject}-${sourceUrl}`}>
+                  <span>{subject}</span>
+                  <a href={sourceUrl} target="_blank" rel="noreferrer">{attribution} ↗</a>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+
         <div className="back-row"><Link className="text-link" href="/">← 返回旅程列表</Link></div>
       </main>
       <SiteFooter />
