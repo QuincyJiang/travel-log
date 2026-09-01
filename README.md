@@ -147,7 +147,7 @@ trips
         └── day_restaurants ── restaurants
 ```
 
-完整初始数据位于 `migrations/0005_seed_trip_content.sql`，表结构位于 `migrations/0004_create_trip_content.sql`。`trips.map_provider` 决定行程使用 `google` 或 `amap`；国内高德地图优先使用路线节点的中文标签定位，海外行程的 `day_route_nodes.place_query` 使用 Google Maps 可识别的地点名或经纬度。写入后执行远程 migration，页面列表和路由由 `/api/trips` 自动生成。
+完整初始数据位于 `migrations/0005_seed_trip_content.sql`，表结构位于 `migrations/0004_create_trip_content.sql`。`trips.map_provider` 决定行程使用 `google` 或 `amap`；`trip_overview_nodes.place_query` 可为总览节点指定精确地图地点，未填写时使用节点标签；每日路线通过 `day_route_nodes.place_query` 定位。写入后执行远程 migration，页面列表和路由由 `/api/trips` 自动生成。
 
 ## 图片
 

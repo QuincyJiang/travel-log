@@ -68,7 +68,7 @@ const loadTrip = async (db, tripId) => {
       WHERE trip_id = ? ORDER BY sort_order
     `).bind(tripId),
     db.prepare(`
-      SELECT label FROM trip_overview_nodes
+      SELECT label, place_query FROM trip_overview_nodes
       WHERE trip_id = ? ORDER BY sort_order
     `).bind(tripId),
     db.prepare(`
@@ -178,10 +178,6 @@ const loadTrip = async (db, tripId) => {
   const specialtiesByDay = groupBy(foodSpecialties, "day_id");
   const restaurantsByDay = groupBy(dayRestaurants, "day_id");
   const foodByDay = new Map(foodGuides.map((guide) => [guide.day_id, guide]));
-  const overviewRouteNodes = routeNodes.filter(
-    (node, index, nodes) =>
-      index === 0 || node.label !== nodes[index - 1].label,
-  );
 
   return {
     ...toTripSummary(row),
@@ -192,9 +188,9 @@ const loadTrip = async (db, tripId) => {
       embed: row.overview_map_embed,
       external: row.overview_map_external,
       nodes: overviewNodes.map(({ label }) => label),
-      routeNodes: overviewRouteNodes.map((node) => ({
+      routeNodes: overviewNodes.map((node) => ({
         label: node.label,
-        query: row.map_provider === "amap" ? node.label : node.place_query,
+        query: node.place_query ?? node.label,
       })),
     },
     days: days.map((day) => {
