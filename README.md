@@ -26,7 +26,7 @@ npm run preview
 - 公开相册：`/photos/:tripId`
 - 登录后上传管理：`/manage/photos`
 
-管理页支持批量选择 JPEG、PNG、WebP，原图和浏览器生成的预览图均使用单张 50 MB 的上传上限。原图保持原始格式和画质写入 R2；浏览器额外生成一张最长边 1600 px 的高质量 WebP 预览图供相册网格使用，灯箱加载原图。删除照片时会删除原图、预览图与元数据。
+管理页支持批量选择 JPEG、PNG、WebP，原图和浏览器生成的预览图均使用单张 50 MB 的上传上限。原图保持原始格式和画质写入 R2；浏览器额外生成一张最长边 960 px 的 WebP 预览图供相册网格使用，灯箱加载原图。删除照片时会删除原图、预览图与元数据。
 
 管理页“已上传照片”区域支持批量重建高清缩略图。重建过程只读取现有原图并覆盖对应的 `thumbnail.webp`，不会重新上传或修改原图和照片元数据。
 
@@ -52,7 +52,7 @@ photos/:tripId/day-01/:photoId/
 └── thumbnail.webp
 ```
 
-照片元数据保存在原图的 R2 Custom Metadata 中，因此不依赖额外数据库。
+照片文件保存在 R2，照片元数据、精选状态与顺序保存在 D1。原图的 R2 Custom Metadata 继续保留，供数据恢复使用。
 
 ## Cloudflare Worker 配置
 
@@ -65,6 +65,14 @@ bucket_name = "travel-log"
 ```
 
 当前项目由 Worker 同时托管 Vite 静态资源与 `/api/*` 相册接口。旅行攻略、相册、照片列表和照片文件保持公开；上传、删除和精选等写操作通过 Cloudflare Access 统一登录保护。
+
+项目同时声明 `DB` D1 binding。首次部署或新增迁移时执行：
+
+```bash
+npx wrangler d1 migrations apply travel-log-db --remote
+```
+
+已有 R2 照片会在对应旅程首次读取时自动写入 D1，完成后不再扫描该旅程的 R2 对象。
 
 Cloudflare Builds 配置：
 

@@ -816,7 +816,13 @@ export default function PhotoGalleryPage() {
                   onPointerMove={moveLongPress}
                   onPointerUp={cancelLongPress}
                 >
-                  <img src={photo.thumbnailUrl} alt={photo.caption || photo.place || `Day ${photo.day}`} loading="lazy" />
+                  <img
+                    src={photo.thumbnailUrl}
+                    alt={photo.caption || photo.place || `Day ${photo.day}`}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    fetchPriority={index < 2 ? "high" : "auto"}
+                    decoding="async"
+                  />
                   <i className="photo-selection-indicator"><Check size={15} strokeWidth={2.4} /></i>
                   <span>
                     <b>{String(index + 1).padStart(2, "0")}</b>

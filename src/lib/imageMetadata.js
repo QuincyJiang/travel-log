@@ -1,7 +1,7 @@
 import exifr from "exifr/dist/full.esm.mjs";
 
-const THUMBNAIL_MAX_EDGE = 1600;
-const THUMBNAIL_QUALITY = 0.84;
+const THUMBNAIL_MAX_EDGE = 960;
+const THUMBNAIL_QUALITY = 0.78;
 
 const normalizeExifDate = (value) => {
   if (value instanceof Date) return value.toISOString();

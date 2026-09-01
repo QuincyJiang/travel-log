@@ -11,3 +11,8 @@ run_worker_first = ["/api/*"]
 [[r2_buckets]]
 binding = "TRAVEL_PHOTOS"
 bucket_name = "travel-log"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "travel-log-db"
+database_id = "0629742d-3a5f-48c2-9709-029391873f7f"

@@ -14,9 +14,13 @@ const methodNotAllowed = () =>
   json({ error: "Method not allowed" }, { status: 405 });
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    const context = { request, env };
+    const context = {
+      request,
+      env,
+      waitUntil: (promise) => ctx.waitUntil(promise),
+    };
 
     if (url.pathname === "/api/photos") {
       if (request.method === "GET") return listPhotos(context);
