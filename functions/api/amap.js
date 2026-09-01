@@ -1,6 +1,6 @@
 import { json } from "../_shared/photos";
 
-const AMAP_PROXY_PATH = "/api/amap";
+const AMAP_PROXY_PATH = "/_AMapService";
 
 export async function onRequestGet({ request, env }) {
   if (!env.AMAP_SECURITY_CODE) {
@@ -25,6 +25,7 @@ export async function onRequestGet({ request, env }) {
   const response = await fetch(upstreamUrl, {
     headers: {
       accept: request.headers.get("accept") ?? "application/json",
+      referer: request.headers.get("referer") ?? new URL(request.url).origin,
     },
   });
 

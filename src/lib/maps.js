@@ -1,4 +1,4 @@
-const AMAP_SERVICE_PATH = "/api/amap";
+const AMAP_SERVICE_PATH = "/_AMapService";
 const AMAP_SOURCE = "travel-log";
 
 let amapLoader;

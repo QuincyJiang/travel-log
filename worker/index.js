@@ -34,7 +34,7 @@ export default {
       return methodNotAllowed();
     }
 
-    if (url.pathname.startsWith("/api/amap/")) {
+    if (url.pathname.startsWith("/_AMapService/")) {
       if (request.method === "GET") return proxyAmap(context);
       return methodNotAllowed();
     }
