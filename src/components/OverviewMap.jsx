@@ -13,7 +13,7 @@ export default function OverviewMap({ map }) {
       <div className="overview-map-frame">
         <iframe
           src={map.embed}
-          title="东北旅行完整路线 Google Maps"
+          title="旅行完整路线 Google Maps"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
         />
