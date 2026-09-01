@@ -5,8 +5,9 @@ import { Check, Download, Camera, ChevronLeft, ChevronRight, Images, LoaderCircl
 import { downloadZip } from "client-zip";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
-import { getTrip } from "../data/trips";
+import ContentStatePage from "../components/ContentStatePage";
 import { readExifMetadata } from "../lib/imageMetadata";
+import { useTrip } from "../lib/tripsApi";
 import NotFoundPage from "./NotFoundPage";
 
 const loadPhotos = async (tripId, signal) => {
@@ -112,7 +113,12 @@ const GALLERY_LAYOUTS = [
 
 export default function PhotoGalleryPage() {
   const { tripId } = useParams();
-  const trip = getTrip(tripId);
+  const {
+    data: trip,
+    error: tripError,
+    loading: tripLoading,
+    notFound: tripNotFound,
+  } = useTrip(tripId);
   const [photos, setPhotos] = useState([]);
   const [placeFilter, setPlaceFilter] = useState("all");
   const [collection, setCollection] = useState("featured");
@@ -330,7 +336,8 @@ export default function PhotoGalleryPage() {
     };
   }, [activePhoto, parsedExif]);
 
-  if (!trip) return <NotFoundPage />;
+  if (tripNotFound) return <NotFoundPage />;
+  if (tripLoading || !trip) return <ContentStatePage error={tripError} />;
 
   const stepPhoto = (direction) => {
     resetImageView();

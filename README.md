@@ -52,7 +52,7 @@ photos/:tripId/day-01/:photoId/
 └── thumbnail.webp
 ```
 
-照片文件保存在 R2，照片元数据、精选状态与顺序保存在 D1。原图的 R2 Custom Metadata 继续保留，供数据恢复使用。
+照片文件保存在 R2；照片元数据、上传租约、精选状态与顺序只保存在 D1。
 
 ## Cloudflare Worker 配置
 
@@ -64,15 +64,13 @@ binding = "TRAVEL_PHOTOS"
 bucket_name = "travel-log"
 ```
 
-当前项目由 Worker 同时托管 Vite 静态资源与 `/api/*` 相册接口。旅行攻略、相册、照片列表和照片文件保持公开；上传、删除和精选等写操作通过 Cloudflare Access 统一登录保护。
+当前项目由 Worker 同时托管 Vite 静态资源、D1 旅程内容 API 与 `/api/*` 相册接口。旅行攻略、相册、照片列表和照片文件保持公开；上传、删除和精选等写操作通过 Cloudflare Access 统一登录保护。
 
 项目同时声明 `DB` D1 binding。首次部署或新增迁移时执行：
 
 ```bash
 npx wrangler d1 migrations apply travel-log-db --remote
 ```
-
-已有 R2 照片会在对应旅程首次读取时自动写入 D1，完成后不再扫描该旅程的 R2 对象。
 
 Cloudflare Builds 配置：
 
@@ -81,7 +79,7 @@ Cloudflare Builds 配置：
    - Build command：`npm run build`
    - Deploy command：`npx wrangler deploy`
    - Node version：22
-3. API token 使用 Builds 自动创建的 User Token。它需要 `Workers Scripts: Edit` 与 `Workers R2 Storage: Edit`；不需要 `Cloudflare Pages: Edit`。
+3. API token 使用 Builds 自动创建的 User Token。它需要 `Workers Scripts: Edit`、`Workers R2 Storage: Edit` 与 `D1: Edit`；不需要 `Cloudflare Pages: Edit`。
 4. 部署成功后，`wrangler.toml` 会自动建立 `TRAVEL_PHOTOS` → `travel-log` R2 binding。
 
 ### Cloudflare Access 登录保护
@@ -105,6 +103,7 @@ Cloudflare Builds 配置：
 - `/trips/qinghai-hexi-2025`：无需登录即可打开。
 - `/photos/qinghai-hexi-2025`：无需登录即可打开。
 - `/manage/photos`：跳转 Cloudflare Access 登录。
+- `/api/trips`：无需登录即可返回旅程列表。
 - `/api/photos?tripId=qinghai-hexi-2025`：无需登录即可返回照片列表。
 - `/api/photo-file?key=...`：无需登录即可读取有效照片。
 - 向 `/api/admin/photos` 发起 `POST`、`PATCH` 或 `DELETE`：需要登录。
@@ -130,40 +129,27 @@ npm run deploy
 
 ## 新增旅程
 
-在 `src/data/trips/` 中为每段旅程创建独立模块，再从 `src/data/trips.js` 导入并加入 `trips` 数组。页面路由与列表由数据自动生成：
+旅程内容完全保存在 D1，不在前端代码中维护副本。新增或修改内容时创建 SQL migration，按外键顺序写入以下关系表：
 
-- 旅程总览：`/trips/:tripId`
-- 每日详情：`/trips/:tripId/day/:dayNumber`
-
-旅程对象包含以下主要字段：
-
-```js
-{
-  id: "unique-trip-id",
-  title: "旅程标题",
-  period: "日期范围",
-  cover: "/images/cover.jpg",
-  summary: "旅程说明",
-  overviewMap: { embed, external, nodes },
-  days: [
-    {
-      day: 1,
-      title: "当日标题",
-      routeNodes: [{ label, place }],
-      routeModes: ["公共交通方式"],
-      timeline: [{ time, title, note }],
-      places: [{ name, type, image, description }],
-      tips: ["提示"]
-    }
-  ]
-}
+```text
+trips
+├── trip_tags / trip_metrics / trip_overview_nodes
+└── trip_days
+    ├── day_route_nodes / day_route_legs
+    ├── day_timeline_items / day_tips
+    ├── day_places ── places
+    │   ├── day_place_details
+    │   └── day_place_sources ── content_sources
+    └── food_guides
+        ├── food_specialties
+        └── day_restaurants ── restaurants
 ```
 
-`routeNodes[].place` 使用 Google Maps 可识别的英文地点名或经纬度。相邻节点会自动生成公共交通地图路段。
+完整初始数据位于 `migrations/0005_seed_trip_content.sql`，表结构位于 `migrations/0004_create_trip_content.sql`。`day_route_nodes.place_query` 使用 Google Maps 可识别的地点名或经纬度。写入后执行远程 migration，页面列表和路由由 `/api/trips` 自动生成。
 
 ## 图片
 
-地点图片放在 `public/images`。当前实景图来自 Wikimedia Commons，具体来源记录在各旅程模块的 `imageCredits` 中。
+地点图片放在 `public/images`。图片署名与来源保存在 D1 `media_credits` 表。
 
 ## 内容资料
 

@@ -1,9 +1,13 @@
 import { Link } from "wouter";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
-import { trips } from "../data/trips";
+import ContentStatePage from "../components/ContentStatePage";
+import { useTrips } from "../lib/tripsApi";
 
 export default function HomePage() {
+  const { data: trips, error, loading } = useTrips();
+  if (loading || !trips) return <ContentStatePage error={error} />;
+
   const years = trips.map((trip) => trip.dateRange.slice(0, 4)).sort();
   const archivePeriod = years.length > 1 ? `${years[0]}—${years.at(-1)}` : years[0];
 

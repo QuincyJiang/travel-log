@@ -2,18 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Check, ImagePlus, LoaderCircle, RefreshCw, Trash2, Upload } from "lucide-react";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
-import { trips } from "../data/trips";
+import ContentStatePage from "../components/ContentStatePage";
 import { createPhotoThumbnail, readPhotoDimensions } from "../lib/imageMetadata";
+import { useTrip, useTrips } from "../lib/tripsApi";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
-
-const initialTripId = () => {
-  const queryTripId = new URLSearchParams(window.location.search).get("trip");
-  return trips.some((trip) => trip.id === queryTripId)
-    ? queryTripId
-    : (trips.find((trip) => trip.status === "已归档") ?? trips[0]).id;
-};
 
 const defaultCaption = (name) => name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
 
@@ -21,15 +15,13 @@ const updateItem = (items, id, values) =>
   items.map((item) => (item.id === id ? { ...item, ...values } : item));
 
 const tripDateEntries = (trip) => {
-  const match = trip.dateRange.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return [];
-  const [, year, month, day] = match.map(Number);
-  const start = Date.UTC(year, month - 1, day);
-  return trip.days.map((tripDay, index) => {
-    const date = new Date(start + index * 86400000);
+  if (!trip) return [];
+  const year = trip.dateRange.slice(0, 4);
+  return trip.days.map((tripDay) => {
+    const [month, day] = tripDay.date.split("/");
     return {
       day: tripDay.day,
-      date: date.toISOString().slice(0, 10),
+      date: `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`,
       title: tripDay.title,
     };
   });
@@ -45,8 +37,17 @@ const legacyPhotoFingerprint = (photo) =>
   ["legacy", photo.size, photo.width, photo.height, photo.takenAt].join(":");
 
 export default function PhotoManagerPage() {
-  const [tripId, setTripId] = useState(initialTripId);
-  const trip = useMemo(() => trips.find((item) => item.id === tripId), [tripId]);
+  const {
+    data: trips,
+    error: tripsError,
+    loading: tripsLoading,
+  } = useTrips();
+  const [tripId, setTripId] = useState("");
+  const {
+    data: trip,
+    error: tripError,
+    loading: tripLoading,
+  } = useTrip(tripId);
   const [place, setPlace] = useState("");
   const [items, setItems] = useState([]);
   const itemsRef = useRef(items);
@@ -71,7 +72,8 @@ export default function PhotoManagerPage() {
   const allUploaded =
     items.length > 0 && items.every((item) => ["done", "duplicate"].includes(item.status));
 
-  const refreshPhotos = async (activeTripId = trip.id, signal) => {
+  const refreshPhotos = async (activeTripId = trip?.id, signal) => {
+    if (!activeTripId) return;
     const response = await fetch(`/api/photos?tripId=${encodeURIComponent(activeTripId)}`, {
       cache: "no-store",
       signal,
@@ -84,6 +86,16 @@ export default function PhotoManagerPage() {
   };
 
   useEffect(() => {
+    if (!trips || tripId) return;
+    const queryTripId = new URLSearchParams(window.location.search).get("trip");
+    const initialTrip = trips.find((item) => item.id === queryTripId)
+      ?? trips.find((item) => item.status === "已归档")
+      ?? trips[0];
+    setTripId(initialTrip?.id ?? "");
+  }, [tripId, trips]);
+
+  useEffect(() => {
+    if (!trip) return undefined;
     tripIdRef.current = trip.id;
     const controller = new AbortController();
     setPlace("");
@@ -406,6 +418,10 @@ export default function PhotoManagerPage() {
         : `${photos.length} 张高清缩略图已更新。`),
     );
   };
+
+  if (tripsLoading || tripLoading || !trips || !trip) {
+    return <ContentStatePage error={tripsError || tripError} />;
+  }
 
   return (
     <div className="page-shell photo-manager-page">

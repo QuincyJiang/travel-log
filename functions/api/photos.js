@@ -1,15 +1,13 @@
 import {
-  checksumKey,
-  ensureTripPhotosIndexed,
   imageLimits,
   json,
   listTripPhotos,
   MAX_FEATURED_PHOTOS,
+  photoFromRow,
+  prepareOwnedPhotoInsert,
   photoPrefix,
   requirePhotoBucket,
-  requirePhotoDb,
-  savePhoto,
-  toCustomMetadata,
+  requireDatabase,
   validDay,
   validPhotoId,
   validTripId,
@@ -62,88 +60,68 @@ const requireAdminPhotosPath = (request) =>
     ? null
     : json({ error: "Not found" }, { status: 404 });
 
-const parseReservation = async (object) => {
-  try {
-    return JSON.parse(await object.text());
-  } catch {
-    return null;
-  }
-};
+const releaseUploadLease = (db, tripId, checksum, photoId) =>
+  db.prepare(`
+    DELETE FROM photo_upload_leases
+    WHERE trip_id = ? AND checksum = ? AND photo_id = ?
+  `).bind(tripId, checksum, photoId).run();
 
-const releaseChecksum = async (bucket, tripId, checksum, photoId) => {
-  const key = checksumKey(tripId, checksum);
+const reserveUploadLease = async (db, bucket, tripId, checksum, reservation) => {
   for (let attempt = 0; attempt < 10; attempt += 1) {
-    const existing = await bucket.get(key);
-    if (!existing) return;
-    const current = await parseReservation(existing);
-    if (current?.photoId !== photoId || current.releasedAt) return;
-    const released = await bucket.put(
-      key,
-      JSON.stringify({
-        ...current,
-        releasedAt: new Date().toISOString(),
-      }),
-      {
-        onlyIf: { etagMatches: existing.etag },
-        httpMetadata: { contentType: "application/json" },
-      },
-    );
-    if (released) return;
-  }
-  throw new Error("Checksum lease is busy");
-};
+    const created = await db.prepare(`
+      INSERT INTO photo_upload_leases (
+        trip_id, checksum, photo_id, day, reserved_at
+      ) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(trip_id, checksum) DO NOTHING
+    `).bind(
+      tripId,
+      checksum,
+      reservation.photoId,
+      reservation.day,
+      reservation.reservedAt,
+    ).run();
+    if (created.meta.changes === 1) return true;
 
-const reserveChecksum = async (bucket, tripId, checksum, reservation) => {
-  const key = checksumKey(tripId, checksum);
-  const value = JSON.stringify(reservation);
-
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const created = await bucket.put(key, value, {
-      onlyIf: { etagDoesNotMatch: "*" },
-      httpMetadata: { contentType: "application/json" },
-    });
-    if (created) return key;
-
-    const existing = await bucket.get(key);
+    const existing = await db.prepare(`
+      SELECT photo_id, day, reserved_at
+      FROM photo_upload_leases
+      WHERE trip_id = ? AND checksum = ?
+    `).bind(tripId, checksum).first();
     if (!existing) continue;
-    const current = await parseReservation(existing);
-
-    if (validDay(current?.day) && validPhotoId(current?.photoId)) {
-      const result = await bucket.list({
-        prefix: `${photoPrefix(tripId, Number(current.day), current.photoId)}/`,
-        limit: 3,
-      });
-      if (result.objects.some((object) => /\/original\.(?:jpg|png|webp)$/.test(object.key))) {
-        return null;
-      }
-    }
-
-    const reservedAt = Date.parse(current?.reservedAt);
+    const reservedAt = Date.parse(existing.reserved_at);
     if (
-      !current?.releasedAt &&
       Number.isFinite(reservedAt) &&
       Date.now() - reservedAt < CHECKSUM_LEASE_MS
     ) {
-      return null;
+      return false;
     }
 
-    const reclaimed = await bucket.put(key, value, {
-      onlyIf: { etagMatches: existing.etag },
-      httpMetadata: { contentType: "application/json" },
-    });
-    if (reclaimed) {
-      if (validDay(current?.day) && validPhotoId(current?.photoId)) {
+    const reclaimed = await db.prepare(`
+      UPDATE photo_upload_leases
+      SET photo_id = ?, day = ?, reserved_at = ?
+      WHERE trip_id = ? AND checksum = ? AND photo_id = ? AND reserved_at = ?
+    `).bind(
+      reservation.photoId,
+      reservation.day,
+      reservation.reservedAt,
+      tripId,
+      checksum,
+      existing.photo_id,
+      existing.reserved_at,
+    ).run();
+    if (reclaimed.meta.changes === 1) {
+      if (validDay(existing.day) && validPhotoId(existing.photo_id)) {
         const staleObjects = await bucket.list({
-          prefix: `${photoPrefix(tripId, Number(current.day), current.photoId)}/`,
+          prefix: `${photoPrefix(tripId, Number(existing.day), existing.photo_id)}/`,
         });
         if (staleObjects.objects.length) {
           await bucket.delete(staleObjects.objects.map((object) => object.key));
         }
       }
-      return key;
+      return true;
     }
   }
-  return null;
+  throw new Error("Upload lease is busy");
 };
 
 export async function onRequestGet({ request, env }) {
@@ -155,8 +133,7 @@ export async function onRequestGet({ request, env }) {
     }
 
     const photos = await listTripPhotos(
-      requirePhotoBucket(env),
-      requirePhotoDb(env),
+      requireDatabase(env),
       tripId,
     );
     return json({ photos }, { headers: { "cache-control": "no-store" } });
@@ -172,7 +149,7 @@ export async function onRequestPost({ request, env }) {
 
   let bucket;
   let writtenKeys = [];
-  let markerKey;
+  let leaseReserved = false;
   let reservationPhotoId;
   let reservationTripId;
   let reservedChecksum;
@@ -181,7 +158,7 @@ export async function onRequestPost({ request, env }) {
 
   try {
     bucket = requirePhotoBucket(env);
-    db = requirePhotoDb(env);
+    db = requireDatabase(env);
     const formData = await request.formData();
     const tripId = formData.get("tripId");
     const day = Number(formData.get("day"));
@@ -213,17 +190,28 @@ export async function onRequestPost({ request, env }) {
     const takenAt = cleanText(formData.get("takenAt"), 40);
     const width = Number(formData.get("width")) || null;
     const height = Number(formData.get("height")) || null;
-    const duplicate = (await listTripPhotos(bucket, db, tripId)).find(
-      (photo) =>
-        photo.checksum === checksum ||
-        (
-          !photo.checksum &&
-          photo.size === original.size &&
-          photo.width === width &&
-          photo.height === height &&
-          photo.takenAt === takenAt
-        ),
-    );
+    const duplicateRow = await db.prepare(`
+      SELECT *
+      FROM photos
+      WHERE trip_id = ? AND (
+        checksum = ? OR (
+          checksum LIKE 'legacy:%'
+          AND size = ?
+          AND width IS ?
+          AND height IS ?
+          AND taken_at IS ?
+        )
+      )
+      LIMIT 1
+    `).bind(
+      tripId,
+      checksum,
+      original.size,
+      width,
+      height,
+      takenAt,
+    ).first();
+    const duplicate = duplicateRow ? photoFromRow(duplicateRow) : null;
     if (duplicate) {
       return json({ error: "照片已存在", duplicate }, { status: 409 });
     }
@@ -235,12 +223,12 @@ export async function onRequestPost({ request, env }) {
     const prefix = photoPrefix(tripId, day, id);
     const originalKey = `${prefix}/original.${extensionForType(original.type)}`;
     const thumbnailKey = `${prefix}/thumbnail.webp`;
-    markerKey = await reserveChecksum(bucket, tripId, checksum, {
+    leaseReserved = await reserveUploadLease(db, bucket, tripId, checksum, {
       day,
       photoId: id,
       reservedAt: new Date().toISOString(),
     });
-    if (!markerKey) {
+    if (!leaseReserved) {
       return json({ error: "照片已存在或正在上传" }, { status: 409 });
     }
     writtenKeys = [originalKey, thumbnailKey];
@@ -259,13 +247,10 @@ export async function onRequestPost({ request, env }) {
       exif: cleanExif(formData.get("exif")),
       takenAt,
       uploadedAt: new Date().toISOString(),
-      originalName: cleanText(original.name, 100),
       size: original.size,
       width,
       height,
     };
-    const customMetadata = toCustomMetadata(metadata);
-
     const storedThumbnail = await bucket.put(thumbnailKey, thumbnail.stream(), {
       httpMetadata: {
         contentType: "image/webp",
@@ -277,16 +262,24 @@ export async function onRequestPost({ request, env }) {
           contentType: original.type,
           cacheControl: "public, max-age=31536000, immutable",
         },
-        customMetadata,
         sha256: checksumBuffer,
     });
-    await savePhoto(
-      db,
-      metadata,
-      originalKey,
-      thumbnailKey,
-      storedThumbnail.etag,
-    );
+    const [photoInsert] = await db.batch([
+      prepareOwnedPhotoInsert(
+        db,
+        metadata,
+        originalKey,
+        thumbnailKey,
+        storedThumbnail.etag,
+      ),
+      db.prepare(`
+        DELETE FROM photo_upload_leases
+        WHERE trip_id = ? AND checksum = ? AND photo_id = ?
+      `).bind(tripId, checksum, id),
+    ]);
+    if (photoInsert.meta.changes !== 1) {
+      throw new Error("Upload lease expired");
+    }
     writtenPhotoId = id;
 
     return json(
@@ -320,10 +313,10 @@ export async function onRequestPost({ request, env }) {
         console.error("Failed to clean up photo upload", cleanupError);
       }
     }
-    if (cleanupSucceeded && bucket && markerKey && reservationPhotoId) {
+    if (cleanupSucceeded && db && leaseReserved && reservationPhotoId) {
       try {
-        await releaseChecksum(
-          bucket,
+        await releaseUploadLease(
+          db,
           reservationTripId,
           reservedChecksum,
           reservationPhotoId,
@@ -361,8 +354,7 @@ export async function onRequestPut({ request, env }) {
     }
 
     const bucket = requirePhotoBucket(env);
-    const db = requirePhotoDb(env);
-    await ensureTripPhotosIndexed(bucket, db, tripId);
+    const db = requireDatabase(env);
     const prefix = photoPrefix(tripId, day, photoId);
     const stored = await db.prepare(`
       SELECT id
@@ -416,11 +408,7 @@ export async function onRequestDelete({ request, env }) {
     }
 
     const bucket = requirePhotoBucket(env);
-    const db = requirePhotoDb(env);
-    await Promise.all(
-      [...new Set(photos.map(({ tripId }) => tripId))]
-        .map((tripId) => ensureTripPhotosIndexed(bucket, db, tripId)),
-    );
+    const db = requireDatabase(env);
     const storedResults = await db.batch(
       photos.map(({ tripId, day, photoId }) => db.prepare(`
         SELECT id, trip_id, checksum, original_key, thumbnail_key, thumbnail_version
@@ -443,16 +431,6 @@ export async function onRequestDelete({ request, env }) {
         db.prepare("DELETE FROM photos WHERE id = ?").bind(photo.id),
       ),
     );
-    const checksumCleanup = await Promise.allSettled(
-      existingPhotos.map((photo) =>
-        photo.checksum && !photo.checksum.startsWith("legacy:")
-          ? releaseChecksum(bucket, photo.trip_id, photo.checksum, photo.id)
-          : Promise.resolve(),
-      ),
-    );
-    checksumCleanup
-      .filter((result) => result.status === "rejected")
-      .forEach((result) => console.error("Failed to release checksum lease", result.reason));
     return json({
       deleted: existingPhotos.length,
       missing: photos.length - existingPhotos.length,
@@ -484,12 +462,10 @@ export async function onRequestPatch({ request, env }) {
       return json({ error: "精选参数无效" }, { status: 400 });
     }
 
-    const bucket = requirePhotoBucket(env);
-    const db = requirePhotoDb(env);
+    const db = requireDatabase(env);
     const uniquePhotos = [
       ...new Map(photos.map((photo) => [photo.photoId, photo])).values(),
     ];
-    await ensureTripPhotosIndexed(bucket, db, tripId);
     const requestedIds = uniquePhotos.map(({ photoId }) => photoId);
     const storedPhotoIds = new Set();
     for (let index = 0; index < requestedIds.length; index += 90) {

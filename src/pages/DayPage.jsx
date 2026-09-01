@@ -4,15 +4,17 @@ import SiteFooter from "../components/SiteFooter";
 import TransitRoute from "../components/TransitRoute";
 import PlaceGallery from "../components/PlaceGallery";
 import FoodMap from "../components/FoodMap";
-import { getDay, getTrip } from "../data/trips";
+import ContentStatePage from "../components/ContentStatePage";
+import { useTrip } from "../lib/tripsApi";
 import NotFoundPage from "./NotFoundPage";
 
 export default function DayPage() {
   const { tripId, dayNumber } = useParams();
-  const trip = getTrip(tripId);
-  const day = getDay(trip, dayNumber);
+  const { data: trip, error, loading, notFound } = useTrip(tripId);
+  const day = trip?.days.find((item) => item.day === Number(dayNumber));
 
-  if (!trip || !day) return <NotFoundPage />;
+  if (notFound || (trip && !day)) return <NotFoundPage />;
+  if (loading || !trip) return <ContentStatePage error={error} />;
 
   const previous = trip.days.find((item) => item.day === day.day - 1);
   const next = trip.days.find((item) => item.day === day.day + 1);

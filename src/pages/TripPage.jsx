@@ -5,14 +5,16 @@ import OverviewMap from "../components/OverviewMap";
 import StayOverview from "../components/StayOverview";
 import DayCard from "../components/DayCard";
 import TripViewNav from "../components/TripViewNav";
-import { getTrip } from "../data/trips";
+import ContentStatePage from "../components/ContentStatePage";
+import { useTrip } from "../lib/tripsApi";
 import NotFoundPage from "./NotFoundPage";
 
 export default function TripPage() {
   const { tripId } = useParams();
-  const trip = getTrip(tripId);
+  const { data: trip, error, loading, notFound } = useTrip(tripId);
 
-  if (!trip) return <NotFoundPage />;
+  if (notFound) return <NotFoundPage />;
+  if (loading || !trip) return <ContentStatePage error={error} />;
 
   return (
     <div className="page-shell trip-page">
