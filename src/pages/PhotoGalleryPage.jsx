@@ -19,6 +19,21 @@ const loadPhotos = async (tripId, signal) => {
   return data.photos;
 };
 
+const hasPhotoAdminAccess = async (signal) => {
+  if (import.meta.env.DEV) return true;
+  try {
+    const response = await fetch("/cdn-cgi/access/get-identity", {
+      cache: "no-store",
+      credentials: "include",
+      signal,
+    });
+    return response.ok;
+  } catch (error) {
+    if (error.name === "AbortError") throw error;
+    return false;
+  }
+};
+
 const preloadedOriginals = new Map();
 
 const preloadOriginal = (url) => {
@@ -110,6 +125,7 @@ export default function PhotoGalleryPage() {
   const [layoutMode, setLayoutMode] = useState("three");
   const [imageView, setImageView] = useState({ zoom: 1, x: 0, y: 0 });
   const [state, setState] = useState({ loading: true, error: "" });
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const longPressTimer = useRef(null);
   const pointerStart = useRef(null);
   const ignoreClickId = useRef("");
@@ -136,6 +152,22 @@ export default function PhotoGalleryPage() {
       });
     return () => controller.abort();
   }, [trip]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    hasPhotoAdminAccess(controller.signal)
+      .then(setHasAdminAccess)
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (hasAdminAccess) return;
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
+    pointerStart.current = null;
+    setSelectedIds(new Set());
+  }, [hasAdminAccess]);
 
   const places = useMemo(
     () => {
@@ -371,7 +403,7 @@ export default function PhotoGalleryPage() {
   };
 
   const startLongPress = (event, photoId) => {
-    if (event.pointerType === "mouse") return;
+    if (!hasAdminAccess || event.pointerType === "mouse") return;
     pointerStart.current = { x: event.clientX, y: event.clientY };
     clearTimeout(longPressTimer.current);
     longPressTimer.current = window.setTimeout(() => {
@@ -744,7 +776,13 @@ export default function PhotoGalleryPage() {
           <div className="photo-empty compact">
             <Star size={30} strokeWidth={1.5} />
             <h2>{collection === "featured" ? "还没有精选照片" : "当前筛选下没有照片"}</h2>
-            <p>{collection === "featured" ? "切换到全部照片，通过右键或长按选择照片加入精选。" : "调整地点筛选后重试。"}</p>
+            <p>
+              {collection === "featured"
+                ? (hasAdminAccess
+                    ? "切换到全部照片，通过右键或长按选择照片加入精选。"
+                    : "切换到全部照片查看这段旅程的完整影像。")
+                : "调整地点筛选后重试。"}
+            </p>
             {collection === "featured" && (
               <button className="text-link" type="button" onClick={() => switchCollection("all")}>查看全部照片</button>
             )}
@@ -767,6 +805,7 @@ export default function PhotoGalleryPage() {
                   aria-pressed={selectedIds.has(photo.id)}
                   onClick={() => openOrSelectPhoto(photo, index)}
                   onContextMenu={(event) => {
+                    if (!hasAdminAccess) return;
                     event.preventDefault();
                     if (ignoreClickId.current === photo.id) return;
                     toggleSelection(photo.id);

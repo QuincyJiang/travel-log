@@ -3,7 +3,6 @@ const FEATURED_PREFIX = "featured";
 export const MAX_FEATURED_PHOTOS = 16;
 const MAX_FEATURED_UPDATE_ATTEMPTS = 64;
 const MAX_ORIGINAL_SIZE = 50 * 1024 * 1024;
-const MAX_THUMBNAIL_SIZE = 2 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export const json = (data, init = {}) => {
@@ -122,7 +121,7 @@ export function validateImageFile(file, label, maxSize) {
 
 export const imageLimits = {
   original: MAX_ORIGINAL_SIZE,
-  thumbnail: MAX_THUMBNAIL_SIZE,
+  thumbnail: MAX_ORIGINAL_SIZE,
 };
 
 const encodeMetadata = (metadata) => {
