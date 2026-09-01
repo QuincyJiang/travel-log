@@ -16,6 +16,7 @@ const toTripSummary = (row) => ({
   coverAlt: row.cover_alt,
   summary: row.summary,
   routeLabel: row.route_label,
+  mapProvider: row.map_provider,
 });
 
 const groupBy = (rows, key) => {
@@ -177,15 +178,24 @@ const loadTrip = async (db, tripId) => {
   const specialtiesByDay = groupBy(foodSpecialties, "day_id");
   const restaurantsByDay = groupBy(dayRestaurants, "day_id");
   const foodByDay = new Map(foodGuides.map((guide) => [guide.day_id, guide]));
+  const overviewRouteNodes = routeNodes.filter(
+    (node, index, nodes) =>
+      index === 0 || node.label !== nodes[index - 1].label,
+  );
 
   return {
     ...toTripSummary(row),
     tags: tags.map(({ name }) => name),
     metrics: metrics.map(({ value, label }) => ({ value, label })),
     overviewMap: {
+      provider: row.map_provider,
       embed: row.overview_map_embed,
       external: row.overview_map_external,
       nodes: overviewNodes.map(({ label }) => label),
+      routeNodes: overviewRouteNodes.map((node) => ({
+        label: node.label,
+        query: row.map_provider === "amap" ? node.label : node.place_query,
+      })),
     },
     days: days.map((day) => {
       const date = dayDate(row.start_date, day.day_number);
@@ -204,6 +214,7 @@ const loadTrip = async (db, tripId) => {
         routeNodes: (routeNodesByDay.get(day.id) ?? []).map((node) => ({
           label: node.label,
           place: node.place_query,
+          query: row.map_provider === "amap" ? node.label : node.place_query,
         })),
         routeModes: (routeLegsByDay.get(day.id) ?? []).map(({ mode }) => mode),
         timeline: (timelineByDay.get(day.id) ?? []).map((item) => ({

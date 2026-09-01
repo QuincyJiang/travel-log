@@ -1,4 +1,5 @@
 import { BedDouble, ExternalLink, MapPin } from "lucide-react";
+import { mapProviderName, mapSearchUrl } from "../lib/maps";
 
 function buildStayGroups(days) {
   const overnightDays = days.filter((day) => day.stay !== "返程");
@@ -27,12 +28,10 @@ function buildStayGroups(days) {
   }, []);
 }
 
-const mapLink = (area) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(area)}`;
-
-export default function StayOverview({ days }) {
+export default function StayOverview({ days, mapProvider }) {
   const stays = buildStayGroups(days);
   const totalNights = stays.reduce((total, stay) => total + stay.nights, 0);
+  const providerName = mapProviderName(mapProvider);
 
   return (
     <section className="stay-overview" aria-labelledby="stay-overview-title">
@@ -50,11 +49,11 @@ export default function StayOverview({ days }) {
             <div className="stay-card-head">
               <span>{String(index + 1).padStart(2, "0")}</span>
               <a
-                href={mapLink(stay.area)}
+                href={mapSearchUrl(mapProvider, stay.area)}
                 target="_blank"
                 rel="noreferrer"
-                aria-label={`在 Google Maps 查找${stay.area}酒店`}
-                title="在 Google Maps 查找酒店"
+                aria-label={`在${providerName}查找${stay.area}酒店`}
+                title={`在${providerName}查找酒店`}
               >
                 <ExternalLink size={15} strokeWidth={1.8} />
               </a>

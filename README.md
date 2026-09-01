@@ -1,6 +1,6 @@
 # 行旅志 Travel Log
 
-数据驱动的个人旅行日志。项目包含旅程归档、行程总览、Google Maps、每日卡片、独立详情页、公共交通分段路线、景点说明与 Tips。
+数据驱动的个人旅行日志。项目包含旅程归档、行程总览、国内高德地图、海外 Google Maps、每日卡片、独立详情页、公共交通分段路线、景点说明与 Tips。
 
 ## 本地运行
 
@@ -15,6 +15,8 @@ npm run dev
 npm run build
 npm run preview
 ```
+
+国内行程使用高德 Web JS API。开发时将 `.env.example` 复制为 `.env.local` 并填写公开的 Web JS API Key，将 `.dev.vars.example` 复制为 `.dev.vars` 并填写安全密钥。生产环境需把 `VITE_AMAP_KEY` 配置为 Cloudflare Builds 环境变量，并通过 `npx wrangler secret put AMAP_SECURITY_CODE` 保存安全密钥，不能把安全密钥提交到仓库。
 
 浏览器标签页和添加到设备主屏幕时均使用红色“行”图标。iPhone 上使用 Safari 打开网站，选择“分享 → 添加到主屏幕”即可使用自定义图标和“行旅志”名称。
 
@@ -145,7 +147,7 @@ trips
         └── day_restaurants ── restaurants
 ```
 
-完整初始数据位于 `migrations/0005_seed_trip_content.sql`，表结构位于 `migrations/0004_create_trip_content.sql`。`day_route_nodes.place_query` 使用 Google Maps 可识别的地点名或经纬度。写入后执行远程 migration，页面列表和路由由 `/api/trips` 自动生成。
+完整初始数据位于 `migrations/0005_seed_trip_content.sql`，表结构位于 `migrations/0004_create_trip_content.sql`。`trips.map_provider` 决定行程使用 `google` 或 `amap`；国内高德地图优先使用路线节点的中文标签定位，海外行程的 `day_route_nodes.place_query` 使用 Google Maps 可识别的地点名或经纬度。写入后执行远程 migration，页面列表和路由由 `/api/trips` 自动生成。
 
 ## 图片
 

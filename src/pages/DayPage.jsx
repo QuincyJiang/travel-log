@@ -46,7 +46,7 @@ export default function DayPage() {
           </div>
         </section>
 
-        <TransitRoute day={day} />
+        <TransitRoute day={day} mapProvider={trip.mapProvider} />
 
         <section className="day-content-grid">
           <div className="timeline-panel">
@@ -77,7 +77,7 @@ export default function DayPage() {
           <PlaceGallery places={day.places} />
         </section>
 
-        <FoodMap food={day.food} />
+        <FoodMap food={day.food} mapProvider={trip.mapProvider} />
 
         <nav className="day-pagination" aria-label="每日行程翻页">
           {previous ? (

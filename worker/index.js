@@ -9,6 +9,7 @@ import {
 } from "../functions/api/admin/photos";
 import { onRequestGet as getPhotoFile } from "../functions/api/photo-file";
 import { onRequestGet as getTrips } from "../functions/api/trips";
+import { onRequestGet as proxyAmap } from "../functions/api/amap";
 import { json } from "../functions/_shared/photos";
 
 const methodNotAllowed = () =>
@@ -30,6 +31,11 @@ export default {
 
     if (url.pathname === "/api/trips") {
       if (request.method === "GET") return getTrips(context);
+      return methodNotAllowed();
+    }
+
+    if (url.pathname.startsWith("/api/amap/")) {
+      if (request.method === "GET") return proxyAmap(context);
       return methodNotAllowed();
     }
 

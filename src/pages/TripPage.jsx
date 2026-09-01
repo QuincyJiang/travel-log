@@ -45,7 +45,7 @@ export default function TripPage() {
 
         <OverviewMap map={trip.overviewMap} />
 
-        <StayOverview days={trip.days} />
+        <StayOverview days={trip.days} mapProvider={trip.mapProvider} />
 
         <section className="itinerary" aria-labelledby="itinerary-title">
           <div className="section-heading">

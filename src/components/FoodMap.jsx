@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { ExternalLink, MapPin, Utensils } from "lucide-react";
+import AmapMap from "./AmapMap";
+import {
+  googleMapEmbedUrl,
+  mapProviderName,
+  mapSearchUrl,
+} from "../lib/maps";
 
-const mapEmbed = (query) =>
-  `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=15&output=embed`;
-
-const mapLink = (query) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-
-export default function FoodMap({ food }) {
+export default function FoodMap({ food, mapProvider }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeRestaurant = food.restaurants[activeIndex];
+  const providerName = mapProviderName(mapProvider);
 
   return (
     <section className="food-section" aria-labelledby="food-title">
@@ -77,23 +78,30 @@ export default function FoodMap({ food }) {
               )}
               <a
                 className="food-map-link"
-                href={mapLink(activeRestaurant.query)}
+                href={mapSearchUrl(mapProvider, activeRestaurant.query)}
                 target="_blank"
                 rel="noreferrer"
-                aria-label={`在 Google Maps 打开 ${activeRestaurant.name}`}
-                title="在 Google Maps 打开"
+                aria-label={`在${providerName}打开 ${activeRestaurant.name}`}
+                title={`在${providerName}打开`}
               >
                 <ExternalLink size={17} strokeWidth={1.8} />
               </a>
             </div>
           </div>
-          <iframe
-            key={activeRestaurant.query}
-            src={mapEmbed(activeRestaurant.query)}
-            title={`${activeRestaurant.name} Google Maps`}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
+          {mapProvider === "amap" ? (
+            <AmapMap
+              label={`${activeRestaurant.name}高德地图`}
+              query={activeRestaurant.query}
+            />
+          ) : (
+            <iframe
+              key={activeRestaurant.query}
+              src={googleMapEmbedUrl(activeRestaurant.query)}
+              title={`${activeRestaurant.name} Google Maps`}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          )}
         </div>
       </div>
     </section>

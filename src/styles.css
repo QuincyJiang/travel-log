@@ -340,6 +340,21 @@ button, input, textarea { font: inherit; }
 .map-heading .section-index { color: #ecc569; }
 .overview-map-frame { position: relative; height: min(58vw, 620px); min-height: 420px; overflow: hidden; border-radius: 4px 80px 4px 4px; background: #d3ddd5; }
 .overview-map-frame iframe { width: 100%; height: 100%; border: 0; filter: saturate(0.78) contrast(1.02); }
+.amap-map,
+.amap-map-canvas { width: 100%; height: 100%; }
+.amap-map { position: relative; }
+.map-error {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  padding: 24px;
+  place-items: center;
+  background: #d3ddd5;
+  color: var(--ink);
+  font-size: 12px;
+  text-align: center;
+}
 .map-status { position: absolute; left: 18px; bottom: 18px; padding: 9px 12px; border-radius: 999px; background: rgba(21, 34, 27, 0.9); font-size: 9px; font-weight: 700; letter-spacing: 0.12em; }
 
 .overview-nodes { display: flex; gap: 0; margin-top: 28px; overflow-x: auto; scrollbar-width: thin; }
@@ -765,7 +780,8 @@ button, input, textarea { font: inherit; }
   border-color: var(--red);
 }
 
-.food-map-card iframe {
+.food-map-card iframe,
+.food-map-card > .amap-map {
   display: block;
   width: 100%;
   height: 520px;
@@ -2073,7 +2089,8 @@ html.trip-view-transition::view-transition-new(trip-view-content) {
   .food-section { margin: 0 -12px 70px; padding: 58px 12px; }
   .food-layout { gap: 28px; }
   .specialty-list article { grid-template-columns: 92px 1fr; gap: 12px; }
-  .food-map-card iframe { height: 360px; }
+  .food-map-card iframe,
+  .food-map-card > .amap-map { height: 360px; }
   .photo-hero, .manager-hero { display: block; padding: 48px 0 32px; }
   .photo-hero h1, .manager-hero h1 { font-size: 52px; }
   .photo-page .photo-hero h1 { font-size: 52px; }
