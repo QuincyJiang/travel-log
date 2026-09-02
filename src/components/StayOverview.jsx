@@ -1,4 +1,5 @@
 import { BedDouble, ExternalLink, MapPin } from "lucide-react";
+import CollapsibleSection from "./CollapsibleSection";
 import { mapProviderName, mapSearchUrl } from "../lib/maps";
 
 function buildStayGroups(days) {
@@ -34,15 +35,14 @@ export default function StayOverview({ days, mapProvider }) {
   const providerName = mapProviderName(mapProvider);
 
   return (
-    <section className="stay-overview" aria-labelledby="stay-overview-title">
-      <div className="section-heading">
-        <div>
-          <span className="section-index">02 / STAYS</span>
-          <h2 id="stay-overview-title">住宿安排</h2>
-        </div>
-        <p>{stays.length} 个住宿地，共 {totalNights} 晚。</p>
-      </div>
-
+    <CollapsibleSection
+      className="stay-overview"
+      id="stay-overview"
+      index="02"
+      meta="STAYS / 每日"
+      title="每日住宿"
+      description={`${stays.length} 个住宿地 · 共 ${totalNights} 晚`}
+    >
       <div className="stay-grid">
         {stays.map((stay, index) => (
           <article className="stay-card" key={`${stay.city}-${stay.checkinDate}`}>
@@ -72,6 +72,6 @@ export default function StayOverview({ days, mapProvider }) {
           </article>
         ))}
       </div>
-    </section>
+    </CollapsibleSection>
   );
 }

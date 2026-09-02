@@ -1,9 +1,37 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 
 export default function DayCard({ tripId, day }) {
+  const cardRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (!window.IntersectionObserver || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setIsVisible(true);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setIsVisible(true);
+        observer.disconnect();
+      },
+      { rootMargin: "0px 0px -8%", threshold: 0.12 },
+    );
+
+    observer.observe(cardRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <Link className="day-card" href={`/trips/${tripId}/day/${day.day}`}>
+    <Link
+      ref={cardRef}
+      className={`day-card ${isVisible ? "is-visible" : ""}`}
+      href={`/trips/${tripId}/day/${day.day}`}
+    >
       <div className="day-card-date">
+        <i aria-hidden="true" />
         <span>{day.date}</span>
         <small>{day.weekday}</small>
       </div>
